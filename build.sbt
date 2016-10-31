@@ -29,13 +29,31 @@ lazy val commonResolvers = Seq(
 )
 
 lazy val commonSettings = Seq(
-  resolvers := commonResolvers,
-  scalacOptions ++= commonScalacOptions
+    resolvers := commonResolvers,
+    scalacOptions ++= commonScalacOptions
 ) ++ coverageSettings ++ buildSettings
 
-lazy val core = (project in file("core")).settings(
-  moduleName := "hephaestus-core",
-  commonSettings
+
+lazy val core = (project in file("core"))
+  .settings(
+    moduleName := "hephaestus-core",
+    commonSettings,
+    target in javah := (target in LocalProject("native")).value / "include"
+).dependsOn(native % Runtime)
+
+lazy val native = (project in file("native"))
+  .enablePlugins(JniNative)
+  .settings(
+    moduleName := "hephaestus-native",
+    buildSettings,
+    sourceDirectory in nativeCompile := baseDirectory.value,
+    compile in Compile := {
+      Def.sequential(
+        javah in LocalProject("core"),
+        nativeCompile
+      ).value
+      (compile in Compile).value
+    }
 )
 
-lazy val root = (project in file(".")).aggregate(core)
+lazy val root = (project in file(".")).aggregate(core, native)
