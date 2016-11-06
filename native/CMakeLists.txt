@@ -26,8 +26,11 @@ if (JNI_FOUND)
     message (STATUS "JNI include directories: ${JNI_INCLUDE_DIRS}")
 endif()
 
+# Setup GLFW
+
+find_package(glfw3 REQUIRED)
+
 # Include directories
-#include_directories(./src)
 include_directories(./target/include)
 include_directories(${JNI_INCLUDE_DIRS})
 

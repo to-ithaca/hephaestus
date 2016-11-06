@@ -1,4 +1,10 @@
+dist: trusty
+sudo: required
 language: scala
+
+before_install:
+ - sudo apt-get -qq update
+ - sudo apt-get install libglfw3-dev
 
 scala:
  - 2.11.8
