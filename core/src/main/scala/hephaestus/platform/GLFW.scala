@@ -4,7 +4,7 @@ package platform
 class GLFW {
 
   @native def init(): Boolean
-  @native def version: Array[Int]
+  @native def version: GLFW.Version
   @native def terminate()
 
   @native def createWindow(size: Int): GLFW.Window
