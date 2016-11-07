@@ -15,6 +15,7 @@ set(PROJECT_VERSION_MAJOR 0)
 set(PROJECT_VERSION_MINOR 1)
 set(PROJECT_VERSION_PATCH 0)
 
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_C_FLAGS "-std=c99")
 add_definitions(-Wall)
 add_definitions(-Wextra)
@@ -27,7 +28,6 @@ if (JNI_FOUND)
 endif()
 
 # Setup GLFW
-
 find_package(glfw3 REQUIRED)
 
 # Include directories
@@ -44,4 +44,5 @@ file(GLOB LIB_SRC
 #
 set (LIB_NAME ${PROJECT_NAME}${PROJECT_VERSION_MAJOR})
 add_library(${LIB_NAME} SHARED ${LIB_SRC})
+target_link_libraries(${LIB_NAME} glfw)
 install(TARGETS ${LIB_NAME} LIBRARY DESTINATION .)

@@ -1,6 +1,9 @@
 package hephaestus
 package platform
 
+import ch.jodersky.jni.nativeLoader
+
+@nativeLoader("hephaestus0")
 class GLFW {
 
   @native def init(): Boolean

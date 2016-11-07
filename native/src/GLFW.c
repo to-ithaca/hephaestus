@@ -16,7 +16,7 @@ JNIEXPORT jintArray JNICALL Java_hephaestus_platform_GLFW_version
 
   int* version = malloc(sizeof(int) * 3);
 
-  glfwGetVersion(version, version + 1, version + 3);
+  glfwGetVersion(version, version + 1, version + 2);
 
   jintArray result;
   jint fill[3];
