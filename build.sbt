@@ -6,7 +6,7 @@ lazy val coverageSettings = Seq(
 lazy val buildSettings = Seq(
   organization := "com.ithaca",
   scalaOrganization := "org.typelevel",
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.12.0",
   name         := "hephaestus",
   version      := "0.1.0-SNAPSHOT"
 )
