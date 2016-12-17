@@ -36,6 +36,25 @@ class Vulkan {
   @native def allocateMemory(device: Vulkan.Device, info: Vulkan.MemoryAllocateInfo): Vulkan.DeviceMemory
   @native def bindImageMemory(device: Vulkan.Device, image: Vulkan.Image, memory: Vulkan.DeviceMemory, offset: Vulkan.DeviceSize): Unit
   @native def freeMemory(device: Vulkan.Device, memory: Vulkan.DeviceMemory): Unit
+
+  @native def createBuffer(device: Vulkan.Device, createInfo: Vulkan.BufferCreateInfo): Vulkan.Buffer
+  @native def getBufferMemoryRequirements(device: Vulkan.Device, buffer: Vulkan.Buffer): Vulkan.MemoryRequirements
+  @native def mapMemory(device: Vulkan.Device, memory: Vulkan.DeviceMemory, offset: Vulkan.DeviceSize, size: Vulkan.DeviceSize, flags: Int): Long
+  @native def loadMemory(ptr: Long, buffer: java.nio.ByteBuffer): Unit
+  @native def unmapMemory(device: Vulkan.Device, memory: Vulkan.DeviceMemory): Unit
+
+  @native def bindBufferMemory(device: Vulkan.Device, buffer: Vulkan.Buffer, memory: Vulkan.DeviceMemory, offset: Vulkan.DeviceSize): Unit
+  @native def destroyBuffer(device: Vulkan.Device, buffer: Vulkan.Buffer): Unit
+
+  @native def createDescriptorSetLayout(device: Vulkan.Device, info: Vulkan.DescriptorSetLayoutCreateInfo): Vulkan.DescriptorSetLayout
+  @native def destroyDescriptorSetLayout(device: Vulkan.Device, descriptorSetLayout: Vulkan.DescriptorSetLayout): Unit
+  @native def createPipelineLayout(device: Vulkan.Device, info: Vulkan.PipelineLayoutCreateInfo): Vulkan.PipelineLayout
+  @native def destroyPipelineLayout(device: Vulkan.Device, pipelineLayout: Vulkan.PipelineLayout): Unit
+    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL,
+                                 &info.desc_pool);
+        vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
+    vkDestroyDescriptorPool(info.device, info.desc_pool, NULL);
 }
 
 object Vulkan {
@@ -282,7 +301,106 @@ object Vulkan {
 
   final class DeviceMemory(val ptr: Long) extends AnyVal
   val SAMPLE_COUNT_1_BIT = 0x00000001
+
+  def memoryTypeIndex(ps: PhysicalDeviceMemoryProperties, bits: Int): Int = 
+    ps.memoryTypes.zipWithIndex.foldLeft((Option.empty[Int], bits)) { (t0, t1) =>
+      (t0, t1) match {
+        case ((None, bits), (tpe, i)) => if((bits & 1) == 1) (Some(i), bits) else (None, bits >> 1)
+        case (prev, _) => prev
+      }
+    }._1.get
+
+  final class BufferCreateInfo(
+    val flags: Int,
+    val size: DeviceSize,
+    val usage: Int,
+    val sharingMode: SharingMode,
+    val queueFamilyIndexCount: Int,
+    val pQueueFamilyIndices: Array[Int])
+
+  final class Buffer(val ptr: Long) extends AnyVal
+
+  val BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x00000010
+  val MEMORY_PROPERTY_HOST_VISIBLE_BIT = 0x00000002
+  val MEMORY_PROPERTY_HOST_COHERENT_BIT = 0x00000004
+
+  final class DescriptorType(val tpe: Int) extends AnyVal
+  val DESCRIPTOR_TYPE_UNIFORM_BUFFER: DescriptorType = new DescriptorType(6)
+
+  val SHADER_STAGE_VERTEX_BIT: Int = 0x00000001
+  final class Sampler(val ptr: Long) extends AnyVal
+
+  final class DescriptorSetLayoutBinding(
+    val binding: Int,
+    val descriptorType: DescriptorType,
+    val descriptorCount: Int,
+    val stageFlags: Int,
+    val pImmutableSamplers: Array[Sampler]
+  )
+
+  final class DescriptorSetLayoutCreateInfo(
+    val flags: Int,
+    val bindingCount: Int,
+    val pBindings: Array[DescriptorSetLayoutBinding]
+  )
+
+  final class DescriptorSetLayout(val ptr: Long) extends AnyVal
+  
+  final class PipelineLayoutCreateInfo(
+    val flags: Int,
+    val setLayoutCount: Int,
+    val pSetLayouts: Array[DescriptorSetLayout],
+    val pushConstantRangeCount: Int,
+    val pPushConstantRanges: Array[Int]
+  )
+
+  final class PipelineLayout(val ptr: Long) extends AnyVal
+
+  final class PushConstantRange(
+    val stageFlags: Int,
+    val offset: Int,
+    val size: Int)
+
+  final class DescriptorPoolSize(
+    val tpe: DescriptorType,
+    val descriptorCount: Int)
+
+  final class DescriptorPoolCreateInfo(
+    val flags: Int,
+    val maxSets: Int.
+    val poolSizeCount: Int,
+    val pPoolSizes: Array[DescriptorPoolSize])
+
+  final class DescriptorSetAllocateInfo(
+    val descriptorPool: DescriptorPool,
+    val descriptorSetCount: Int,
+    val pSetLayouts: Array[DescriptorSetLayout])
+
+  final class DescriptorImageInfo(
+    val sampler: Sampler,
+    val imageView: ImageView,
+    val imageLayout: ImageLayout
+  )
+
+  final class DescriptorBufferInfo(
+    val buffer: Buffer,
+    val offset: DeviceSize,
+    val range: DeviceSize
+  )
+
+  final class WriteDescriptorSet(
+    val dstSet: DescriptorSet,
+    val dstBinding: Int,
+    val dstArrayElement: Int,
+    val descriptorCount: Int,
+    val descriptorType: DescriptorType,
+    val pImageInfo: Array[DescriptorImageInfo],
+    val pBufferInfo: Array[DescriptorBufferInfo],
+    val pTexelBufferView: Array[BufferView]
+  )
+
 }
+
 /*
 bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
                                  VkFlags requirements_mask,

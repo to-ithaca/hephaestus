@@ -45,6 +45,7 @@ object GLFW {
   val NO_API: HintValue = new HintValue(0)
 }
 
+import java.nio._
 
 object Foobar {
   def main(args: Array[String]): Unit = {
@@ -52,7 +53,7 @@ object Foobar {
     glfw.init()
 
     val window = glfw.createWindow(200, 200, "foobar")
-    glfw.setWindowCloseCallback(window, { i => 
+    glfw.setWindowCloseCallback(window, { (i: GLFW.Window)  => 
       println(i.ptr)
     })
     println(s"vulkan is supported ${glfw.vulkanSupported()}")
@@ -177,8 +178,10 @@ object Foobar {
       queueFamilyIndexCount = 0,
       pQueueFamilyIndices = Array.empty[Int]
     )
+    println("about to create swapchain")
     val swapchain = vk.createSwapchain(device, swapchainCreateInfo)
     println("created swapchain")
+    Console.flush()
     val swapchainImages = vk.getSwapchainImages(device, swapchain)
     println(s"got images ${swapchainImages.size}")
     swapchainImages.foreach { i =>
@@ -208,10 +211,12 @@ object Foobar {
       println("destroyed image view")
     }
     val formatProperties = vk.getPhysicalDeviceFormatProperties(physicalDevice, Vulkan.FORMAT_D16_UNORM)
+    println("got format properties")
     val imageTiling = if((formatProperties.linearTilingFeatures & Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) Vulkan.IMAGE_TILING_LINEAR
     else if((formatProperties.optimalTilingFeatures & Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) Vulkan.IMAGE_TILING_OPTIONAL
     else throw new Error("depth not supported")
 
+    println("got image tiling")
     val depthImageInfo = new Vulkan.ImageCreateInfo(
       flags = 0,
       imageType = Vulkan.IMAGE_TYPE_2D,
@@ -230,9 +235,12 @@ object Foobar {
       pQueueFamilyIndices = Array.empty,
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE)
     val depthImage = vk.createImage(device, depthImageInfo)
+    println("created image")
     val depthImageMemoryRequirements = vk.getImageMemoryRequirements(device, depthImage)
+    println("got memory requirments")
 
     val memoryProperties = vk.getPhysicalDeviceMemoryProperties(physicalDevice)
+    println("got memory properties")
     val memoryTypeIndex = memoryProperties.memoryTypes.zipWithIndex.foldLeft((Option.empty[Int], depthImageMemoryRequirements.memoryTypeBits)) { (t0, t1) => 
       (t0, t1) match {
         case ((None, bits), (tpe, i)) => if((bits & 1) == 1) (Some(i), bits) else (None, bits >> 1)
@@ -244,10 +252,12 @@ object Foobar {
       allocationSize = depthImageMemoryRequirements.size,
       memoryTypeIndex = memoryTypeIndex)
     val depthImageMemory = vk.allocateMemory(device, depthImageMemoryAllocateInfo)
+    println("allocated memory")
     vk.bindImageMemory(device, depthImage, depthImageMemory, new Vulkan.DeviceSize(0))
+    println("bound image memory")
     val depthImageViewInfo = new Vulkan.ImageViewCreateInfo(
       flags = 0,
-      image = new Vulkan.Image(0),
+      image = depthImage,
       viewType = Vulkan.IMAGE_VIEW_TYPE_2D,
       format = Vulkan.FORMAT_D16_UNORM,
       components = new Vulkan.ComponentMapping(
@@ -263,10 +273,80 @@ object Foobar {
         baseArrayLayer = 0,
         layerCount = 1)
     )
+    println("about to create depth image view")
     val depthImageView = vk.createImageView(device, depthImageViewInfo)
+    println("created image view")
+
+
+    val uniformData = ByteBuffer.allocateDirect(4 * 4)
+    .putFloat(1f).putFloat(2f).putFloat(3f).putFloat(4f)
+    val bufferCreateInfo = new Vulkan.BufferCreateInfo(
+      usage = Vulkan.BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      size = new Vulkan.DeviceSize(uniformData.capacity),
+      queueFamilyIndexCount = 0,
+      pQueueFamilyIndices = Array.empty[Int],
+      sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
+      flags = 0)
+    println("about to create buffer")
+    val buffer = vk.createBuffer(device, bufferCreateInfo)
+    println("created buffer")
+    val bufferMemoryRequirements = vk.getBufferMemoryRequirements(device, buffer)
+    println("got memory requirements")
+    val bufferMemoryTypeIndex = Vulkan.memoryTypeIndex(memoryProperties, 
+      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    println("got memory type index")
+    val bufferMemoryAllocationInfo = new Vulkan.MemoryAllocateInfo(
+      allocationSize = bufferMemoryRequirements.size,
+      memoryTypeIndex = bufferMemoryTypeIndex)
+    println("about to allocate memory")
+    val bufferMemory = vk.allocateMemory(device, bufferMemoryAllocationInfo)
+    println("allocated memory")
+    val dataPtr = vk.mapMemory(device, bufferMemory, new Vulkan.DeviceSize(0), bufferMemoryRequirements.size, 0) 
+    println("mapped memory")
+    //copy
+    vk.loadMemory(dataPtr, uniformData)
+    println("loaded memory")
+    vk.unmapMemory(device, bufferMemory)
+    println("unmap memory")
+    vk.bindBufferMemory(device, buffer, bufferMemory, new Vulkan.DeviceSize(0))
+    println("bind buffer")
+
+    val descriptorSetLayoutInfo = new Vulkan.DescriptorSetLayoutCreateInfo(
+      flags = 0,
+      bindingCount = 1,
+      pBindings = Array(new Vulkan.DescriptorSetLayoutBinding(
+        binding = 0,
+        descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        descriptorCount = 1,
+        stageFlags = Vulkan.SHADER_STAGE_VERTEX_BIT,
+        pImmutableSamplers = Array.empty[Vulkan.Sampler]
+      )))
+    val descriptorSetLayout = vk.createDescriptorSetLayout(device, descriptorSetLayoutInfo)
+    println("create descriptor set layout")
+    val pipelineLayoutInfo = new Vulkan.PipelineLayoutCreateInfo(
+      flags = 0,
+      setLayoutCount = 1,
+      pSetLayouts = Array(descriptorSetLayout),
+      pushConstantRangeCount = 0,
+      pPushConstantRanges = Array.empty[Int])
+
+    println("create pipeline layout")
+    val pipelineLayout = vk.createPipelineLayout(device, pipelineLayoutInfo)
+    println("created pipeline layout")
+    vk.destroyDescriptorSetLayout(device, descriptorSetLayout)
+    println("destroy desc layout")
+    vk.destroyPipelineLayout(device, pipelineLayout)
+    println("destroy pipeline layout")
+    vk.destroyBuffer(device, buffer)
+    println("destroy buffer")
+    vk.freeMemory(device, bufferMemory)
+    println("free memory")
     vk.destroyImageView(device, depthImageView)
+    println("destroy image view")
     vk.destroyImage(device, depthImage)
+    println("destroy image")
     vk.freeMemory(device, depthImageMemory)
+    println("free memory")
     vk.destroySwapchain(device, swapchain)
     println("destroyed swapchain")
     // vk.destroySurfaceKHR(instance, surf)
