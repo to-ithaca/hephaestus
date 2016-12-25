@@ -127,3 +127,10 @@ jlong inst, jlong window) {
   }
   return (jlong) s;
 }
+
+JNIEXPORT jboolean JNICALL Java_hephaestus_platform_GLFW_getPhysicalDevicePresentationSupport
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)),
+jlong inst, jlong device, int index) {
+  int r = glfwGetPhysicalDevicePresentationSupport((VkInstance) inst, (VkPhysicalDevice) device, index);
+  return (jboolean) r;
+}

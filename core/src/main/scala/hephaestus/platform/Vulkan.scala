@@ -5,56 +5,78 @@ import ch.jodersky.jni.nativeLoader
 
 @nativeLoader("hephaestus0")
 class Vulkan {
-  @native def createInstance(info: Vulkan.InstanceCreateInfo): Vulkan.Instance
-  @native def destroyInstance(inst: Vulkan.Instance): Unit
-  @native def enumeratePhysicalDevices(inst: Vulkan.Instance): Array[Vulkan.PhysicalDevice]
-  @native def getPhysicalDeviceMemoryProperties(device: Vulkan.PhysicalDevice): Vulkan.PhysicalDeviceMemoryProperties
-  @native def getPhysicalDeviceQueueFamilyProperties(device: Vulkan.PhysicalDevice): Array[Vulkan.QueueFamilyProperties]
-  @native def createDevice(d: Vulkan.PhysicalDevice, info: Vulkan.DeviceCreateInfo): Vulkan.Device
-  @native def destroyDevice(d: Vulkan.Device): Unit
-  @native def createCommandPool(device: Vulkan.Device, info: Vulkan.CommandPoolCreateInfo): Vulkan.CommandPool 
-  @native def destroyCommandPool(device: Vulkan.Device, pool: Vulkan.CommandPool): Unit
-  @native def allocateCommandBuffers(device: Vulkan.Device, info: Vulkan.CommandBufferAllocateInfo): Vulkan.CommandBuffer
-  @native def freeCommandBuffers(device: Vulkan.Device, pool: Vulkan.CommandPool, count: Int, buffer: Vulkan.CommandBuffer): Unit 
+  import Vulkan._
+  @native def createInstance(info: InstanceCreateInfo): Instance
+  @native def destroyInstance(inst: Instance): Unit
+  @native def enumeratePhysicalDevices(inst: Instance): Array[PhysicalDevice]
+  @native def getPhysicalDeviceMemoryProperties(device: PhysicalDevice): PhysicalDeviceMemoryProperties
+  @native def getPhysicalDeviceQueueFamilyProperties(device: PhysicalDevice): Array[QueueFamilyProperties]
+  @native def createDevice(d: PhysicalDevice, info: DeviceCreateInfo): Device
+  @native def destroyDevice(d: Device): Unit
+  @native def createCommandPool(device: Device, info: CommandPoolCreateInfo): CommandPool 
+  @native def destroyCommandPool(device: Device, pool: CommandPool): Unit
+  @native def allocateCommandBuffers(device: Device, info: CommandBufferAllocateInfo): CommandBuffer
+  @native def freeCommandBuffers(device: Device, pool: CommandPool, count: Int, buffer: CommandBuffer): Unit 
 
-  @native def destroySurfaceKHR(inst: Vulkan.Instance, surface: Vulkan.Surface): Unit
-  @native def getPhysicalDeviceSurfaceSupport(device: Vulkan.PhysicalDevice, queueFamilyIndex: Int, surface: Vulkan.Surface): Boolean
-  @native def getPhysicalDeviceSurfaceFormats(device: Vulkan.PhysicalDevice, surface: Vulkan.Surface): Array[Vulkan.SurfaceFormat]
-  @native def getPhysicalDeviceSurfaceCapabilities(device: Vulkan.PhysicalDevice, surface: Vulkan.Surface): Vulkan.SurfaceCapabilities
-  @native def getPhysicalDeviceSurfacePresentModes(device: Vulkan.PhysicalDevice, surface: Vulkan.Surface): Array[Int]
+  @native def destroySurfaceKHR(inst: Instance, surface: Surface): Unit
+  @native def getPhysicalDeviceSurfaceSupport(device: PhysicalDevice, queueFamilyIndex: Int, surface: Surface): Boolean
+  @native def getPhysicalDeviceSurfaceFormats(device: PhysicalDevice, surface: Surface): Array[SurfaceFormat]
+  @native def getPhysicalDeviceSurfaceCapabilities(device: PhysicalDevice, surface: Surface): SurfaceCapabilities
+  @native def getPhysicalDeviceSurfacePresentModes(device: PhysicalDevice, surface: Surface): Array[Int]
 
-  @native def createSwapchain(device: Vulkan.Device, info: Vulkan.SwapchainCreateInfo): Vulkan.Swapchain
-  @native def destroySwapchain(device: Vulkan.Device, swapchain: Vulkan.Swapchain): Unit
-  @native def getSwapchainImages(device: Vulkan.Device, swapchain: Vulkan.Swapchain): Array[Vulkan.Image]
-  @native def createImageView(device: Vulkan.Device, info: Vulkan.ImageViewCreateInfo): Vulkan.ImageView
-  @native def destroyImageView(device: Vulkan.Device, imageView: Vulkan.ImageView): Unit
+  @native def createSwapchain(device: Device, info: SwapchainCreateInfo): Swapchain
+  @native def destroySwapchain(device: Device, swapchain: Swapchain): Unit
+  @native def getSwapchainImages(device: Device, swapchain: Swapchain): Array[Image]
+  @native def createImageView(device: Device, info: ImageViewCreateInfo): ImageView
+  @native def destroyImageView(device: Device, imageView: ImageView): Unit
   
-  @native def getPhysicalDeviceFormatProperties(device: Vulkan.PhysicalDevice, format: Vulkan.Format): Vulkan.FormatProperties
-  @native def createImage(device: Vulkan.Device, info: Vulkan.ImageCreateInfo): Vulkan.Image
-  @native def destroyImage(device: Vulkan.Device, image: Vulkan.Image): Unit
-  @native def getImageMemoryRequirements(device: Vulkan.Device, image: Vulkan.Image): Vulkan.MemoryRequirements
-  @native def allocateMemory(device: Vulkan.Device, info: Vulkan.MemoryAllocateInfo): Vulkan.DeviceMemory
-  @native def bindImageMemory(device: Vulkan.Device, image: Vulkan.Image, memory: Vulkan.DeviceMemory, offset: Vulkan.DeviceSize): Unit
-  @native def freeMemory(device: Vulkan.Device, memory: Vulkan.DeviceMemory): Unit
+  @native def getPhysicalDeviceFormatProperties(device: PhysicalDevice, format: Format): FormatProperties
+  @native def createImage(device: Device, info: ImageCreateInfo): Image
+  @native def destroyImage(device: Device, image: Image): Unit
+  @native def getImageMemoryRequirements(device: Device, image: Image): MemoryRequirements
+  @native def allocateMemory(device: Device, info: MemoryAllocateInfo): DeviceMemory
+  @native def bindImageMemory(device: Device, image: Image, memory: DeviceMemory, offset: DeviceSize): Unit
+  @native def freeMemory(device: Device, memory: DeviceMemory): Unit
 
-  @native def createBuffer(device: Vulkan.Device, createInfo: Vulkan.BufferCreateInfo): Vulkan.Buffer
-  @native def getBufferMemoryRequirements(device: Vulkan.Device, buffer: Vulkan.Buffer): Vulkan.MemoryRequirements
-  @native def mapMemory(device: Vulkan.Device, memory: Vulkan.DeviceMemory, offset: Vulkan.DeviceSize, size: Vulkan.DeviceSize, flags: Int): Long
+  @native def createBuffer(device: Device, createInfo: BufferCreateInfo): Buffer
+  @native def getBufferMemoryRequirements(device: Device, buffer: Buffer): MemoryRequirements
+  @native def mapMemory(device: Device, memory: DeviceMemory, offset: DeviceSize, size: DeviceSize, flags: Int): Long
   @native def loadMemory(ptr: Long, buffer: java.nio.ByteBuffer): Unit
-  @native def unmapMemory(device: Vulkan.Device, memory: Vulkan.DeviceMemory): Unit
+  @native def unmapMemory(device: Device, memory: DeviceMemory): Unit
 
-  @native def bindBufferMemory(device: Vulkan.Device, buffer: Vulkan.Buffer, memory: Vulkan.DeviceMemory, offset: Vulkan.DeviceSize): Unit
-  @native def destroyBuffer(device: Vulkan.Device, buffer: Vulkan.Buffer): Unit
+  @native def bindBufferMemory(device: Device, buffer: Buffer, memory: DeviceMemory, offset: DeviceSize): Unit
+  @native def destroyBuffer(device: Device, buffer: Buffer): Unit
 
-  @native def createDescriptorSetLayout(device: Vulkan.Device, info: Vulkan.DescriptorSetLayoutCreateInfo): Vulkan.DescriptorSetLayout
-  @native def destroyDescriptorSetLayout(device: Vulkan.Device, descriptorSetLayout: Vulkan.DescriptorSetLayout): Unit
-  @native def createPipelineLayout(device: Vulkan.Device, info: Vulkan.PipelineLayoutCreateInfo): Vulkan.PipelineLayout
-  @native def destroyPipelineLayout(device: Vulkan.Device, pipelineLayout: Vulkan.PipelineLayout): Unit
-    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL,
-                                 &info.desc_pool);
-        vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
-    vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
-    vkDestroyDescriptorPool(info.device, info.desc_pool, NULL);
+  @native def createDescriptorSetLayout(device: Device, info: DescriptorSetLayoutCreateInfo): DescriptorSetLayout
+  @native def destroyDescriptorSetLayout(device: Device, descriptorSetLayout: DescriptorSetLayout): Unit
+  @native def createPipelineLayout(device: Device, info: PipelineLayoutCreateInfo): PipelineLayout
+  @native def destroyPipelineLayout(device: Device, pipelineLayout: PipelineLayout): Unit
+
+  @native def createDescriptorPool(device: Device, info: DescriptorPoolCreateInfo): DescriptorPool
+  @native def destroyDescriptorPool(device: Device, pool: DescriptorPool): Unit
+  @native def allocateDescriptorSets(device: Device, info: DescriptorSetAllocateInfo): Array[DescriptorSet]
+  @native def freeDescriptorSets(device: Device, pool: DescriptorPool, count: Int, sets: Array[DescriptorSet]): Unit
+  @native def updateDescriptorSets(device: Device, writeCount: Int, writes: Array[WriteDescriptorSet], copyCount: Int, copies: Array[CopyDescriptorSet]): Unit
+
+  @native def createSemaphore(device: Device, info: SemaphoreCreateInfo): Semaphore
+  @native def destroySemaphore(device: Device, semaphore: Semaphore): Unit
+
+  @native def acquireNextImageKHR(device: Device, swapchain: Swapchain, timeout: Long, semaphore: Semaphore, fence: Fence): Int
+  @native def createRenderPass(device: Device, info: RenderPassCreateInfo): RenderPass
+  @native def destroyRenderPass(device: Device, renderPass: RenderPass): Unit
+
+  @native def createShaderModule(device: Device, info: ShaderModuleCreateInfo): ShaderModule
+  @native def destroyShaderModule(device: Device, module: ShaderModule): Unit
+
+  @native def beginCommandBuffer(buffer: CommandBuffer, info: CommandBufferBeginInfo): Unit
+  @native def endCommandBuffer(buffer: CommandBuffer): Unit
+  @native def createFence(device: Device, info: FenceCreateInfo): Fence
+  @native def destroyFence(device: Device, fence: Fence): Unit
+  @native def queueSubmit(queue: Queue, submitCount: Int, pSubmits: Array[SubmitInfo], fence: Fence): Unit
+  @native def waitForFences(device: Device, fenceCount: Int, pFences: Array[Fence], waitAll: Boolean, timeout: Long)
+  @native def createFramebuffer(device: Device, info: FramebufferCreateInfo): Framebuffer
+  @native def destroyFramebuffer(device: Device, framebuffer: Framebuffer): Unit
+  @native def getDeviceQueue(device: Device, queueFamilyIndex: Int, queueIndex: Int): Queue
 }
 
 object Vulkan {
@@ -272,6 +294,9 @@ object Vulkan {
 
   final class ImageLayout(val layout: Int) extends AnyVal
   val IMAGE_LAYOUT_UNDEFINED = new ImageLayout(0)
+  val IMAGE_LAYOUT_PRESENT_SRC_KHR = new ImageLayout(1000001002)
+  val IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL = new ImageLayout(2)
+  val IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL = new ImageLayout(3)
 
   final class ImageCreateInfo(
     val flags: Int,
@@ -328,6 +353,7 @@ object Vulkan {
   val DESCRIPTOR_TYPE_UNIFORM_BUFFER: DescriptorType = new DescriptorType(6)
 
   val SHADER_STAGE_VERTEX_BIT: Int = 0x00000001
+  val SHADER_STAGE_FRAGMENT_BIT = 0x00000010
   final class Sampler(val ptr: Long) extends AnyVal
 
   final class DescriptorSetLayoutBinding(
@@ -367,14 +393,18 @@ object Vulkan {
 
   final class DescriptorPoolCreateInfo(
     val flags: Int,
-    val maxSets: Int.
+    val maxSets: Int,
     val poolSizeCount: Int,
     val pPoolSizes: Array[DescriptorPoolSize])
+
+  final class DescriptorPool(val ptr: Long) extends AnyVal
 
   final class DescriptorSetAllocateInfo(
     val descriptorPool: DescriptorPool,
     val descriptorSetCount: Int,
     val pSetLayouts: Array[DescriptorSetLayout])
+
+  final class DescriptorSet(val ptr: Long) extends AnyVal
 
   final class DescriptorImageInfo(
     val sampler: Sampler,
@@ -399,24 +429,122 @@ object Vulkan {
     val pTexelBufferView: Array[BufferView]
   )
 
-}
+  final class CopyDescriptorSet(
+    val srcSet: DescriptorSet,
+    val srcBinding: Int,
+    val srcArrayElement: Int,
+    val dstSet: DescriptorSet,
+    val dstBinding: Int,
+    val dstArrayElement: Int,
+    val descriptorCount: Int
+  )
 
-/*
-bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
-                                 VkFlags requirements_mask,
-                                 uint32_t *typeIndex) {
-    // Search memtypes to find first index with those properties
-    for (uint32_t i = 0; i < info.memory_properties.memoryTypeCount; i++) {
-        if ((typeBits & 1) == 1) {
-            // Type is available, does it match user properties?
-            if ((info.memory_properties.memoryTypes[i].propertyFlags &
-                 requirements_mask) == requirements_mask) {
-                *typeIndex = i;
-                return true;
-            }
-        }
-        typeBits >>= 1;
-    }
-    // No memory types matched, return failure
-    return false;
-}**/
+  final class BufferView(val prt: Long) extends AnyVal
+
+  final class Semaphore(val ptr: Long) extends AnyVal
+  final class SemaphoreCreateInfo(val flags: Int) extends AnyVal
+
+  final class Fence(val ptr: Long) extends AnyVal 
+
+  final class AttachmentLoadOp(val op: Int) extends AnyVal
+  val ATTACHMENT_LOAD_OP_CLEAR = new AttachmentLoadOp(1)
+  val ATTACHMENT_LOAD_OP_DONT_CARE = new AttachmentLoadOp(2)
+
+  final class AttachmentStoreOp(val op: Int) extends AnyVal
+  val ATTACHMENT_STORE_OP_STORE = new AttachmentStoreOp(0)
+  val ATTACHMENT_STORE_OP_DONT_CARE = new AttachmentStoreOp(1)
+
+  final class AttachmentDescription(
+    val flags: Int,
+    val format: Format,
+    val samples: Int,
+    val loadOp: AttachmentLoadOp,
+    val storeOp: AttachmentStoreOp,
+    val stencilLoadOp: AttachmentLoadOp,
+    val stencilStoreOp: AttachmentStoreOp,
+    val initialLayout: ImageLayout,
+    val finalLayout: ImageLayout)
+
+  final class AttachmentReference(
+    val attachment: Int,
+    val layout: ImageLayout)
+
+  final class PipelineBindPoint(val point: Int) extends AnyVal
+  val PIPELINE_BIND_POINT_GRAPHICS = new PipelineBindPoint(0)
+
+  final class SubpassDescription(
+    val flags: Int,
+    val pipelineBindPoint: PipelineBindPoint,
+    val inputAttachmentCount: Int,
+    val pInputAttachments: Array[AttachmentReference],
+    val colorAttachmentCount: Int,
+    val pColorAttachments: Array[AttachmentReference],
+    val pResolveAttachments: Array[AttachmentReference],
+    val pDepthStencilAttachment: Array[AttachmentReference],
+    val preserveAttachmentCount: Int,
+    val pPreserveAttachments: Array[Int])
+
+  final class SubpassDependency(
+    val srcSubpass: Int,
+    val dstSubpass: Int,
+    val srcStageMask: Int,
+    val dstStageMask: Int,
+    val srcAccessMask: Int,
+    val dstAccessMask: Int,
+    val dependencyFlags: Int
+  )
+
+  final class RenderPassCreateInfo(
+    val flags: Int,
+    val attachmentCount: Int,
+    val pAttachments: Array[AttachmentDescription],
+    val subpassCount: Int,
+    val pSubpasses: Array[SubpassDescription],
+    val dependencyCount: Int,
+    val pDependencies: Array[SubpassDependency])
+
+  final class RenderPass(val ptr: Long) extends AnyVal
+
+  final class ShaderModuleCreateInfo(
+    val flags: Int,
+    val codeSize: Int,
+    val pCode: Array[Int]
+  )
+
+  final class ShaderModule(val ptr: Long) extends AnyVal
+
+  final class PipelineShaderStageCreateInfo(
+    val flags: Int,
+    val stage: Int,
+    val module: ShaderModule,
+    val pName: String)
+
+  final class FramebufferCreateInfo(
+    val flags: Int,
+    val renderPass: RenderPass,
+    val attachmentCount: Int,
+    val pAttachments: Array[ImageView],
+    val width: Int,
+    val height: Int,
+    val layers: Int
+  )
+
+  final class Framebuffer(val ptr: Long) extends AnyVal
+
+  final class CommandBufferBeginInfo(val flags: Int) extends AnyVal
+
+  final class Queue(val ptr: Long) extends AnyVal
+
+  final class FenceCreateInfo(val flags: Int) extends AnyVal
+
+  final class SubmitInfo(
+    val waitSemaphoreCount: Int,
+    val pWaitSemaphores: Array[Semaphore],
+    val pWaitDstStageMask: Array[Int],
+    val commandBufferCount: Int,
+    val pCommandBuffers: Array[CommandBuffer],
+    val signalSemaphoreCount: Int,
+    val pSignalSemaphores: Array[Semaphore]
+  )
+  val PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT = 0x00000400
+}
