@@ -19,7 +19,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_C_FLAGS "-std=c99")
 add_definitions(-Wall)
 add_definitions(-Wextra)
-add_definitions(-pedantic)
+#add_definitions(-pedantic)
 
 # Setup JNI
 find_package(JNI REQUIRED)

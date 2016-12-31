@@ -42,7 +42,7 @@ object Step7 extends Utils {
       flags = 0)
     val buffer = vk.createBuffer(device, bufferCreateInfo)
     val bufferMemoryRequirements = vk.getBufferMemoryRequirements(device, buffer)
-    val bufferMemoryTypeIndex = Vulkan.memoryTypeIndex(memoryProperties, 
+    val bufferMemoryTypeIndex = memoryTypeIndex(memoryProperties, bufferMemoryRequirements,
       Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
     val bufferMemoryAllocationInfo = new Vulkan.MemoryAllocateInfo(
       allocationSize = bufferMemoryRequirements.size,

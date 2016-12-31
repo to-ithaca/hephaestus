@@ -2,6 +2,7 @@ package hephaestus
 package platform
 
 import ch.jodersky.jni.nativeLoader
+import java.nio.ByteBuffer
 
 @nativeLoader("hephaestus0")
 class Vulkan {
@@ -77,6 +78,20 @@ class Vulkan {
   @native def createFramebuffer(device: Device, info: FramebufferCreateInfo): Framebuffer
   @native def destroyFramebuffer(device: Device, framebuffer: Framebuffer): Unit
   @native def getDeviceQueue(device: Device, queueFamilyIndex: Int, queueIndex: Int): Queue
+
+  @native def cmdBeginRenderPass(buffer: CommandBuffer, info: RenderPassBeginInfo, contents: SubpassContents): Unit
+  @native def cmdBindVertexBuffers(commandBuffer: CommandBuffer, firstBinding: Int, bindingCount: Int, buffers: Array[Buffer], offsets: Array[DeviceSize]): Unit
+  @native def cmdEndRenderPass(buffer: CommandBuffer): Unit
+
+  @native def createGraphicsPipelines(device: Device, count: Int, infos: Array[GraphicsPipelineCreateInfo]): Array[Pipeline]
+  @native def destroyPipeline(device: Device, pipeline: Pipeline)
+
+  @native def enumerateInstanceLayerProperties: Array[LayerProperties]
+  @native def enumerateInstanceExtensionProperties(layerName: String): Array[ExtensionProperties]
+  @native def enumerateDeviceLayerProperties(device: PhysicalDevice): Array[LayerProperties]
+
+  @native def debugReport(inst: Instance): Unit
+//  @native def createDebugReportCallbackEXT(instance: Instance, info: DebugReportCallbackCreateInfo): DebugReportCallbackEXT
 }
 
 object Vulkan {
@@ -145,6 +160,15 @@ object Vulkan {
     val width: Int,
     val height: Int)
 
+
+  final class Offset2D(
+    val x: Int,
+    val y: Int)
+
+  final class Rect2D(
+    val offset: Offset2D,
+    val extent: Extent2D)
+
   final class DeviceQueueCreateInfo(
     val pNext: Long,
     val flags: Int,
@@ -194,6 +218,7 @@ object Vulkan {
   val FORMAT_UNDEFINED = new Format(0)
   val FORMAT_B8G8R8A8_UNORM = new Format(44)
   val FORMAT_D16_UNORM = new Format(124)
+  val FORMAT_R32G32B32A32_SFLOAT = new Format(109)
 
   val FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000200
 
@@ -346,6 +371,7 @@ object Vulkan {
   final class Buffer(val ptr: Long) extends AnyVal
 
   val BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x00000010
+  val BUFFER_USAGE_VERTEX_BUFFER_BIT = 0x00000080
   val MEMORY_PROPERTY_HOST_VISIBLE_BIT = 0x00000002
   val MEMORY_PROPERTY_HOST_COHERENT_BIT = 0x00000004
 
@@ -508,7 +534,7 @@ object Vulkan {
   final class ShaderModuleCreateInfo(
     val flags: Int,
     val codeSize: Int,
-    val pCode: Array[Int]
+    val pCode: ByteBuffer
   )
 
   final class ShaderModule(val ptr: Long) extends AnyVal
@@ -547,4 +573,212 @@ object Vulkan {
     val pSignalSemaphores: Array[Semaphore]
   )
   val PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT = 0x00000400
+
+  final class VertexInputRate(val rate: Int) extends AnyVal
+  val VERTEX_INPUT_RATE_VERTEX = new VertexInputRate(0)
+
+  final class VertexInputBindingDescription(
+    val binding: Int,
+    val stride: Int,
+    val inputRate: VertexInputRate
+  )
+
+  final class VertexInputAttributeDescription(
+    val location: Int,
+    val binding: Int,
+    val format: Format,
+    val offset: Int)
+
+  sealed trait ClearColorValue
+  final class ClearColorValueFloat(val float32: Array[Float]) extends ClearColorValue
+  final class ClearColorValueInt(val int32: Array[Int]) extends ClearColorValue
+  final class ClearColorValueUint(val uint32: Array[Int]) extends ClearColorValue
+
+  final class ClearDepthStencilValue(
+    val depth: Float,
+    val stencil: Int)
+
+  sealed trait ClearValue
+  final class ClearValueColor(val color: ClearColorValue) extends ClearValue
+  final class ClearValueDepthStencil(val depthStencil: ClearDepthStencilValue) extends ClearValue
+
+  final class RenderPassBeginInfo(
+    val renderPass: RenderPass,
+    val framebuffer: Framebuffer,
+    val renderArea: Rect2D,
+    val clearValueCount: Int,
+    val pClearValues: Array[ClearValue])
+
+  final class SubpassContents(val contents: Int) extends AnyVal
+  val SUBPASS_CONTENTS_INLINE = new SubpassContents(0) 
+
+  final class DynamicState(val value: Int) extends AnyVal
+
+  val DYNAMIC_STATE_VIEWPORT = new DynamicState(0)
+  val DYNAMIC_STATE_SCISSOR = new DynamicState(1)
+  val DYNAMIC_STATE_STENCIL_REFERENCE = new DynamicState(8)
+  val DYNAMIC_STATE_RANGE_SIZE: Int = DYNAMIC_STATE_STENCIL_REFERENCE.value - DYNAMIC_STATE_VIEWPORT.value + 1
+
+  final class PipelineDynamicStateCreateInfo(
+    val flags: Int,
+    val dynamicStateCount: Int,
+    val pDynamicStates: Array[DynamicState])
+
+  final class PipelineVertexInputStateCreateInfo(
+    val flags: Int,
+    val vertexBindingDescriptionCount: Int,
+    val pVertexBindingDescriptions: Array[VertexInputBindingDescription],
+    val vertexAttributeDescriptionCount: Int,
+    val pVertexAttributeDescriptions: Array[VertexInputAttributeDescription])
+
+  final class PrimitiveTopology(val value: Int) extends AnyVal
+  val PRIMITIVE_TOPOLOGY_TRIANGLE_LIST = new PrimitiveTopology(3)
+
+
+  final class PipelineInputAssemblyStateCreateInfo(
+    val flags: Int,
+    val topology: PrimitiveTopology,
+    val primitiveRestartEnable: Boolean)
+
+  final class PolygonMode(val value: Int) extends AnyVal
+  val POLYGON_MODE_FILL = new PolygonMode(0)
+
+  val CULL_MODE_BACK_BIT: Int = 0x00000002
+
+  final class FrontFace(val value: Int) extends AnyVal
+  val FRONT_FACE_COUNTER_CLOCKWISE = new FrontFace(0)
+
+  final class PipelineRasterizationStateCreateInfo(
+    val flags: Int,
+    val depthClampEnable: Boolean,
+    val rasterizerDiscardEnable: Boolean,
+    val polygonMode: PolygonMode,
+    val cullMode: Int,
+    val frontFace: FrontFace,
+    val depthBiasEnable: Boolean,
+    val depthBiasConstantFactor: Float,
+    val depthBiasClamp: Float,
+    val depthBiasSlopeFactor: Float,
+    val lineWidth: Float)
+
+  final class LogicOp(val value: Int) extends AnyVal
+  val LOGIC_OP_NO_OP = new LogicOp(5)
+
+  final class PipelineColorBlendStateCreateInfo(
+    val flags: Int,
+    val logicOpEnable: Boolean,
+    val logicOp: LogicOp,
+    val attachmentCount: Int,
+    val pAttachments: Array[PipelineColorBlendAttachmentState],
+    val blendConstants: Array[Float])
+
+  final class BlendFactor(val value: Int) extends AnyVal
+  val BLEND_FACTOR_ZERO = new BlendFactor(0)
+
+  final class BlendOp(val value: Int) extends AnyVal
+  val BLEND_OP_ADD = new BlendOp(0)
+
+  final class PipelineColorBlendAttachmentState(
+    val blendEnable: Boolean,
+    val srcColorBlendFactor: BlendFactor,
+    val dstColorBlendFactor: BlendFactor,
+    val colorBlendOp: BlendOp,
+    val srcAlphaBlendFactor: BlendFactor,
+    val dstAlphaBlendFactor: BlendFactor,
+    val alphaBlendOp: BlendOp,
+    val colorWriteMask: Int)
+
+  final class Viewport(
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float,
+    val minDepth: Float,
+    val maxDepth: Float)
+
+  final class PipelineViewportStateCreateInfo(
+    val flags: Int,
+    val viewportCount: Int,
+    val pViewports: Array[Viewport],
+    val scissorCount: Int,
+    val pScissors: Array[Rect2D])
+
+  final class CompareOp(val value: Int) extends AnyVal
+  val COMPARE_OP_LESS_OR_EQUAL = new CompareOp(3)
+  val COMPARE_OP_ALWAYS = new CompareOp(7)
+
+  final class StencilOp(val value: Int) extends AnyVal
+  val STENCIL_OP_KEEP = new StencilOp(0)
+
+  final class StencilOpState(
+    val failOp: StencilOp,
+    val passOp: StencilOp,
+    val depthFailOp: StencilOp,
+    val compareOp: CompareOp,
+    val compareMask: Int,
+    val writeMask: Int,
+    val reference: Int)
+
+  final class PipelineDepthStencilStateCreateInfo(
+    val flags: Int,
+    val depthTestEnable: Boolean,
+    val depthWriteEnable: Boolean,
+    val depthCompareOp: CompareOp,
+    val depthBoundsTestEnable: Boolean,
+    val stencilTestEnable: Boolean,
+    val front: StencilOpState,
+    val back: StencilOpState,
+    val minDepthBounds: Float,
+    val maxDepthBounds: Float)
+
+  final class PipelineMultisampleStateCreateInfo(
+    val flags: Int,
+    val rasterizationSamples: Int,
+    val sampleShadingEnable: Boolean,
+    val minSampleShading: Float,
+    val pSampleMask: Int,
+    val alphaToCoverageEnable: Boolean,
+    val alphaToOneEnable: Boolean)
+
+  final class Pipeline(val ptr: Long) extends AnyVal
+
+  final class GraphicsPipelineCreateInfo(
+    val flags: Int,
+    val stageCount: Int,
+    val pStages: Array[PipelineShaderStageCreateInfo],
+    val pVertexInputState: PipelineVertexInputStateCreateInfo,
+    val pInputAssemblyState: PipelineInputAssemblyStateCreateInfo,
+    val pViewportState: PipelineViewportStateCreateInfo,
+    val pRasterizationState: PipelineRasterizationStateCreateInfo,
+    val pMultisampleState: PipelineMultisampleStateCreateInfo,
+    val pDepthStencilState: PipelineDepthStencilStateCreateInfo,
+    val pColorBlendState: PipelineColorBlendStateCreateInfo,
+    val pDynamicState: PipelineDynamicStateCreateInfo,
+    val layout: PipelineLayout,
+    val renderPass: RenderPass,
+    val subpass: Int,
+    val basePipelineHandle: Pipeline,
+    val basePipelineIndex: Int)
+
+  final class LayerProperties(
+    val layerName: String,
+    val specVersion: Int,
+    val implementationVersion: Int,
+    val description: String)
+
+  final class ExtensionProperties(
+    val extensionName: String,
+    val specVersion: Int)
+  val EXT_DEBUG_REPORT_EXTENSION_NAME: String = "VK_EXT_debug_report"
+// typedef struct VkDebugReportCallbackCreateInfoEXT {
+//     VkStructureType                 sType;
+//     const void*                     pNext;
+//     VkDebugReportFlagsEXT           flags;
+//     PFN_vkDebugReportCallbackEXT    pfnCallback;
+//     void*                           pUserData;
+// } VkDebugReportCallbackCreateInfoEXT;
+//   final class VkDebugReportCallbackCreateInfoEXT(
+//     val flags: Int,
+//     val pfnCallback: 
+//   )
 }

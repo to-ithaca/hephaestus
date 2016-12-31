@@ -7,7 +7,7 @@ object Step10 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 
-    val instance = initInstanceExtensions()
+    val instance = initInstanceExtensionsDebug()
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
     val window = glfw.createWindow(200, 200, "foobar")
     val surface = glfw.createWindowSurface(instance, window)

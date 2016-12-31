@@ -46,6 +46,7 @@ object Step8 extends Utils {
         stageFlags = Vulkan.SHADER_STAGE_VERTEX_BIT,
         pImmutableSamplers = Array.empty[Vulkan.Sampler]
       )))
+    println("create description")
     val descriptorSetLayout = vk.createDescriptorSetLayout(device, descriptorSetLayoutInfo)
     val pipelineLayoutInfo = new Vulkan.PipelineLayoutCreateInfo(
       flags = 0,
@@ -53,7 +54,9 @@ object Step8 extends Utils {
       pSetLayouts = Array(descriptorSetLayout),
       pushConstantRangeCount = 0,
       pPushConstantRanges = Array.empty[Int])
+    println("createPipelineLayout")
     val pipelineLayout = vk.createPipelineLayout(device, pipelineLayoutInfo)
+    println("created pipeline")
 
     vk.destroyDescriptorSetLayout(device, descriptorSetLayout)
     vk.destroyPipelineLayout(device, pipelineLayout)

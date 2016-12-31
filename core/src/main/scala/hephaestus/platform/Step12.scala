@@ -2,7 +2,6 @@ package hephaestus
 package platform
 
 import java.nio._
-import java.io._
 
 object Step12 extends Utils {
 
@@ -50,37 +49,9 @@ object Step12 extends Utils {
     val currentBuffer = vk.acquireNextImageKHR(device, swapchain, java.lang.Long.MAX_VALUE, semaphore, new Vulkan.Fence(0)) 
     val renderPass = initRenderPass(device, swapchainFormat)
 
-    val vertexSpv = spvFile("vert.spv")
-    val fragSpv = spvFile("frag.spv")
+    val vertexModule = initShaderModule("vert.spv", device)
+    val fragmentModule = initShaderModule("frag.spv", device)
 
-    val vertexModuleCreateInfo = new Vulkan.ShaderModuleCreateInfo(
-      flags = 0,
-      codeSize = vertexSpv.size,
-      pCode = vertexSpv.toArray
-    )
-    val vertexModule = vk.createShaderModule(device, vertexModuleCreateInfo)
-    val vertexShaderStage = new Vulkan.PipelineShaderStageCreateInfo(
-      flags = 0,
-      stage = Vulkan.SHADER_STAGE_VERTEX_BIT,
-      module = vertexModule,
-      pName = "main"
-    )
-
-    val fragmentCreateInfo = new Vulkan.ShaderModuleCreateInfo(
-      flags = 0,
-      codeSize = fragSpv.size,
-      pCode = fragSpv.toArray
-    )
-
-    val fragmentModule = vk.createShaderModule(device, fragmentCreateInfo)
-    val fragmentShaderStage = new Vulkan.PipelineShaderStageCreateInfo(
-      flags = 0,
-      stage = Vulkan.SHADER_STAGE_FRAGMENT_BIT,
-      module = fragmentModule,
-      pName = "main"
-    )
-
-    //new code
     val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(flags = 0)
     vk.beginCommandBuffer(commandBuffer, commandBufferBeginInfo)
 
@@ -119,7 +90,6 @@ object Step12 extends Utils {
     framebuffers.foreach { f =>
       vk.destroyFramebuffer(device, f)
     }
-    //new code
 
     vk.destroyShaderModule(device, vertexModule)
     vk.destroyShaderModule(device, fragmentModule)
