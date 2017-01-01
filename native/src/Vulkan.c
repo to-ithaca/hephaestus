@@ -38,6 +38,12 @@
   (*env)->CallIntMethod(env, o, id);                         \
 })
 
+#define getFloat(env, cls, o, name) \
+({ \
+  jmethodID id = (*env)->GetMethodID(env, cls, name, "()F"); \
+  (*env)->CallFloatMethod(env, o, id);                       \
+})
+
 VkApplicationInfo applicationInfo(JNIEnv* env, jobject info) {
   jclass cls = (*env)->GetObjectClass(env, info);
   jmethodID pan_id = (*env)->GetMethodID(env, cls, "pApplicationName", "()Ljava/lang/String;");
@@ -1348,10 +1354,11 @@ VkFence toFence(JNIEnv* env, jobject o) {
 }
 
 
-JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_waitForFences
+JNIEXPORT jlong JNICALL Java_hephaestus_platform_Vulkan_waitForFences
 (JNIEnv* env, jobject instance __attribute__((unused)), jlong device, jint count, jobjectArray fences, jboolean waitAll, jlong timeout) {
   VkFence* v_fences = ITER(env, fences, (uint32_t) count, VkFence, toFence)
-  RES(vkWaitForFences((VkDevice) device, count, v_fences, waitAll, timeout));
+  VkResult r = vkWaitForFences((VkDevice) device, count, v_fences, waitAll, timeout);
+  return (jlong) r;
 }
 
 VkImageView toImageView(JNIEnv* env, jobject o) {
@@ -2179,4 +2186,93 @@ JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_debugReport
   VkDebugReportCallbackEXT callback;
   PFN_vkCreateDebugReportCallbackEXT f = (PFN_vkCreateDebugReportCallbackEXT) glfwGetInstanceProcAddress((VkInstance) inst, "vkCreateDebugReportCallbackEXT");
   f((VkInstance) inst, &info, NULL, &callback);
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdBindPipeline
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong buffer, jint bindpoint, jlong pipeline) {
+  vkCmdBindPipeline((VkCommandBuffer) buffer, (VkPipelineBindPoint) bindpoint, (VkPipeline) pipeline);
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdBindDescriptorSets
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong buffer, jint bindpoint, jlong layout, 
+ jint first_set, jint set_count, jobjectArray sets, jint offset_count, jintArray offsets) {
+  VkDescriptorSet* v_sets = ITER(env, sets, (uint32_t) set_count, VkDescriptorSet, toDescriptorSet);
+  vkCmdBindDescriptorSets((VkCommandBuffer) buffer, (VkPipelineBindPoint) bindpoint, (VkPipelineLayout) layout,
+                          first_set, set_count, v_sets, offset_count, (uint32_t*) offsets);
+}
+
+VkViewport toViewport(JNIEnv* env, jobject o) {
+  jclass cls = (*env)->GetObjectClass(env, o);
+  float x = getFloat(env, cls, o, "x");
+  float y = getFloat(env, cls, o, "y");
+  float w = getFloat(env, cls, o, "width");
+  float h = getFloat(env, cls, o, "height");
+  float min = getFloat(env, cls, o, "minDepth");
+  float max = getFloat(env, cls, o, "maxDepth");
+  VkViewport vp = {
+    .x = x,
+    .y = y,
+    .width = w,
+    .height = h,
+    .minDepth = min,
+    .maxDepth = max
+  };
+  return vp;
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdSetViewport
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong buffer, jint first_viewport, jint count, jobjectArray viewports) {
+  VkViewport* v_viewports = ITER(env, viewports, (uint32_t) count, VkViewport, toViewport);
+  vkCmdSetViewport((VkCommandBuffer) buffer, first_viewport, count, v_viewports);
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdSetScissor
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong buffer, jint first_scissor, jint count, jobjectArray scissors) {
+  VkRect2D* v_scissors = ITER(env, scissors, (uint32_t) count, VkRect2D, toRect2D);
+  vkCmdSetScissor((VkCommandBuffer) buffer, first_scissor, count, v_scissors);
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdDraw
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong buffer, jint vertex_count, jint instance_count, jint first_vertex, jint first_instance) {
+  vkCmdDraw((VkCommandBuffer) buffer, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+
+VkSwapchainKHR toSwapchainKHR(JNIEnv* env, jobject o) {
+  jclass cls = (*env)->GetObjectClass(env, o);
+  jmethodID ptr_id = (*env)->GetMethodID(env, cls, "ptr", "()J");
+  jlong ptr = (*env)->CallLongMethod(env, o, ptr_id);
+  return (VkSwapchainKHR) ptr;
+}
+
+VkPresentInfoKHR toPresentInfoKHR(JNIEnv* env, jobject o) {
+  jclass cls = (*env)->GetObjectClass(env, o);
+  int wc = getInt(env, cls, o, "waitSemaphoreCount");
+  jmethodID wss_id = (*env)->GetMethodID(env, cls, "pWaitSemaphores", "()[Lhephaestus/platform/Vulkan$Semaphore;");
+  jobjectArray wss_objs = (*env)->CallObjectMethod(env, o, wss_id);
+  VkSemaphore* wss = ITER(env, wss_objs, (uint32_t) wc, VkSemaphore, toSemaphore)
+  int sc = getInt(env, cls, o, "swapchainCount");
+  jmethodID ss_id = (*env)->GetMethodID(env, cls, "pSwapchains", "()[Lhephaestus/platform/Vulkan$Swapchain;");
+  jobjectArray ss_objs = (*env)->CallObjectMethod(env, o, ss_id);
+  VkSwapchainKHR* ss = ITER(env, ss_objs, (uint32_t) sc, VkSwapchainKHR, toSwapchainKHR)
+  int ii = getInt(env, cls, o, "pImageIndices");
+  uint32_t* ii_ptr = malloc(sizeof(uint32_t));
+  *ii_ptr = ii;
+  VkPresentInfoKHR v_info = {
+    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .pNext = NULL,
+    .waitSemaphoreCount = wc,
+    .pWaitSemaphores = wss,
+    .swapchainCount = sc,
+    .pSwapchains = ss,
+    .pImageIndices = ii_ptr,
+    .pResults = NULL
+  };
+  return v_info;
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_queuePresentKHR
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong queue, jobject info) {
+  VkPresentInfoKHR v_info = toPresentInfoKHR(env, info);
+  vkQueuePresentKHR((VkQueue) queue, &v_info);
 }

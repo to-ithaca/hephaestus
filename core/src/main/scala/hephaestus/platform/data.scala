@@ -1,7 +1,7 @@
 package hephaestus
 package platform
 
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 
 object Cube {
 
@@ -18,7 +18,7 @@ object Cube {
     b.putFloat(v.x0).putFloat(v.x1).putFloat(v.x2).putFloat(v.x3)
   }
   def buffer(vs: List[Vertex]): ByteBuffer = {
-    val b = ByteBuffer.allocateDirect(vs.size * (2 * 4 * 4)) //6 * 6 vertices
+    val b = ByteBuffer.allocateDirect(vs.size * (2 * 4 * 4)).order(ByteOrder.nativeOrder()) //6 * 6 vertices
     vs.foreach { v => 
       insert(b, v.position)
       insert(b, v.color)
@@ -73,6 +73,18 @@ object Cube {
   )
 
   val solidFaceColorsData: ByteBuffer = buffer(solidFaceColors)
+
+  val matrix = Array(
+    0.5f, 0f, 0f, 0f,
+    0f, 0.5f, 0f, 0f,
+    0f, 0f, 0.5f, 0f,
+    0f, 0f, 0f, 1f)
+ 
+  val uniformData: ByteBuffer = {
+    val buf = ByteBuffer.allocateDirect(matrix.size * 4).order(ByteOrder.nativeOrder())
+    buf.asFloatBuffer().put(matrix, 0, matrix.size)
+    buf
+  }
 }
 
 

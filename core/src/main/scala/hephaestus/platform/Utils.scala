@@ -12,6 +12,7 @@ trait Utils {
   val glfw = new GLFW()
   val vk = new Vulkan()
 
+  val FENCE_TIMEOUT  = 100000000
   def initInstance(): Vulkan.Instance = {
     val appInfo = new Vulkan.ApplicationInfo(
       pNext = 0,
@@ -511,7 +512,7 @@ trait Utils {
       signalSemaphoreCount = 0,
       pSignalSemaphores = Array.empty[Vulkan.Semaphore])
     vk.queueSubmit(graphicsQueue, 1, Array(submitInfo), fence)
-    vk.waitForFences(device, 1, Array(fence), true, 100000000)
+    vk.waitForFences(device, 1, Array(fence), true, FENCE_TIMEOUT)
   }
 
   def initVertexBuffer(device: Vulkan.Device, size: Int): Vulkan.Buffer = {
@@ -680,4 +681,25 @@ trait Utils {
     pipelines(0)
   }
 
+  def submitQueueWait(device: Vulkan.Device, fence: Vulkan.Fence, commandBuffer: Vulkan.CommandBuffer, graphicsQueue: Vulkan.Queue,
+    semaphore: Vulkan.Semaphore): Unit = {
+    val submitInfo = new Vulkan.SubmitInfo(
+      waitSemaphoreCount = 1,
+      pWaitSemaphores = Array(semaphore),
+      pWaitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+      commandBufferCount = 1,
+      pCommandBuffers = Array(commandBuffer),
+      signalSemaphoreCount = 0,
+      pSignalSemaphores = Array.empty[Vulkan.Semaphore])
+    vk.queueSubmit(graphicsQueue, 1, Array(submitInfo), fence)
+    var shouldWait = true
+    while(shouldWait) {
+      val res = vk.waitForFences(device, 1, Array(fence), true, FENCE_TIMEOUT)
+      //println(s"waiting...${res.value}")
+      if(res.value != Vulkan.TIMEOUT.value) {
+        println("finished waiting")
+        shouldWait = false
+      }
+    }
+  }
 }

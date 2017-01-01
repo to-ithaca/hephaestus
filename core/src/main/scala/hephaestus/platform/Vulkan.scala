@@ -74,7 +74,7 @@ class Vulkan {
   @native def createFence(device: Device, info: FenceCreateInfo): Fence
   @native def destroyFence(device: Device, fence: Fence): Unit
   @native def queueSubmit(queue: Queue, submitCount: Int, pSubmits: Array[SubmitInfo], fence: Fence): Unit
-  @native def waitForFences(device: Device, fenceCount: Int, pFences: Array[Fence], waitAll: Boolean, timeout: Long)
+  @native def waitForFences(device: Device, fenceCount: Int, pFences: Array[Fence], waitAll: Boolean, timeout: Long): Result
   @native def createFramebuffer(device: Device, info: FramebufferCreateInfo): Framebuffer
   @native def destroyFramebuffer(device: Device, framebuffer: Framebuffer): Unit
   @native def getDeviceQueue(device: Device, queueFamilyIndex: Int, queueIndex: Int): Queue
@@ -92,6 +92,14 @@ class Vulkan {
 
   @native def debugReport(inst: Instance): Unit
 //  @native def createDebugReportCallbackEXT(instance: Instance, info: DebugReportCallbackCreateInfo): DebugReportCallbackEXT
+  @native def cmdBindPipeline(buffer: Vulkan.CommandBuffer, bindPoint: PipelineBindPoint, pipeline: Pipeline): Unit
+  @native def cmdBindDescriptorSets(buffer: Vulkan.CommandBuffer, bindPoint: PipelineBindPoint, layout: PipelineLayout, 
+    firstSet: Int, descriptorSetCount: Int, descriptorSets: Array[DescriptorSet], dynamicOffsetCount: Int, 
+    dynamicOffsets: Array[Int]): Unit
+  @native def cmdSetViewport(buffer: CommandBuffer, firstViewport: Int, viewportCount: Int, viewports: Array[Viewport]): Unit
+  @native def cmdSetScissor(buffer: CommandBuffer, firstScissor: Int, scissorCount: Int, scissor: Array[Rect2D]): Unit
+  @native def cmdDraw(buffer: CommandBuffer, vertexCount: Int, instanceCount: Int, firstVertex: Int, firstInstance: Int): Unit
+  @native def queuePresentKHR(queue: Queue, info: PresentInfoKHR): Unit
 }
 
 object Vulkan {
@@ -770,15 +778,14 @@ object Vulkan {
     val extensionName: String,
     val specVersion: Int)
   val EXT_DEBUG_REPORT_EXTENSION_NAME: String = "VK_EXT_debug_report"
-// typedef struct VkDebugReportCallbackCreateInfoEXT {
-//     VkStructureType                 sType;
-//     const void*                     pNext;
-//     VkDebugReportFlagsEXT           flags;
-//     PFN_vkDebugReportCallbackEXT    pfnCallback;
-//     void*                           pUserData;
-// } VkDebugReportCallbackCreateInfoEXT;
-//   final class VkDebugReportCallbackCreateInfoEXT(
-//     val flags: Int,
-//     val pfnCallback: 
-//   )
+
+  final class Result(val value: Long) extends AnyVal
+  val TIMEOUT = new Result(2)
+  final class PresentInfoKHR(
+    val waitSemaphoreCount: Int,
+    val pWaitSemaphores: Array[Semaphore],
+    val swapchainCount: Int,
+    val pSwapchains: Array[Swapchain],
+    val pImageIndices: Int
+  )
 }
