@@ -19,7 +19,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_C_FLAGS "-std=c99")
 add_definitions(-Wall)
 add_definitions(-Wextra)
-add_definitions(-pedantic)
+#add_definitions(-pedantic)
 
 # Setup JNI
 find_package(JNI REQUIRED)
@@ -28,11 +28,14 @@ if (JNI_FOUND)
 endif()
 
 # Setup GLFW
-find_package(glfw3 REQUIRED)
+find_package(glfw3 3.2 REQUIRED)
 
 # Include directories
 include_directories(./target/include)
 include_directories(${JNI_INCLUDE_DIRS})
+include_directories("$ENV{VULKAN_SDK}/include")
+link_directories("$ENV{VULKAN_SDK}/lib") 
+link_directories("$ENV{VULKAN_SDK}/etc/explicit_layer.d")
 
 # Sources
 file(GLOB LIB_SRC
@@ -45,4 +48,5 @@ file(GLOB LIB_SRC
 set (LIB_NAME ${PROJECT_NAME}${PROJECT_VERSION_MAJOR})
 add_library(${LIB_NAME} SHARED ${LIB_SRC})
 target_link_libraries(${LIB_NAME} glfw)
+target_link_libraries(${LIB_NAME} vulkan)
 install(TARGETS ${LIB_NAME} LIBRARY DESTINATION .)

@@ -6,7 +6,7 @@ lazy val coverageSettings = Seq(
 lazy val buildSettings = Seq(
   organization := "com.ithaca",
   scalaOrganization := "org.typelevel",
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.12.0",
   name         := "hephaestus",
   version      := "0.1.0-SNAPSHOT"
 )
@@ -56,4 +56,10 @@ lazy val native = (project in file("native"))
     }
 )
 
-lazy val root = (project in file(".")).aggregate(core, native)
+lazy val samples = (project in file("samples"))
+  .settings(
+    moduleName := "hephaestus-samples",
+    buildSettings
+).dependsOn(core, native)
+
+lazy val root = (project in file(".")).aggregate(core, native, samples)
