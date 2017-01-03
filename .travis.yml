@@ -1,10 +1,16 @@
+dist: trusty
+sudo: required
 language: scala
+
+before_install:
+ - sudo apt-get -qq update
+ - sudo apt-get install libglfw3-dev
 
 scala:
  - 2.11.8
 
 script:
-  - sbt clean coverage test coverageReport
+  - sbt clean compile coverage test coverageReport
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)

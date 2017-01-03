@@ -31,7 +31,6 @@ class GLFW {
 }
 
 object GLFW {
-
   final class Version(val ptr: Array[Int]) extends AnyVal {
     def major: Int = ptr(0)
     def minor: Int = ptr(1)
