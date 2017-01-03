@@ -1,7 +1,10 @@
 package hephaestus
-package platform
+package lunarg
+package tutorial
 
-object Step3 extends Utils {
+import hephaestus.platform._
+
+object Step03 extends Utils {
 
   def main(args: Array[String]): Unit = {
 

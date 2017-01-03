@@ -1,9 +1,11 @@
 package hephaestus
-package platform
+package lunarg
+package tutorial
 
+import hephaestus.platform._
 import java.nio._
 
-object Step7 extends Utils {
+object Step07 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 

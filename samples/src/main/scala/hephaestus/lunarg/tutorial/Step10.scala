@@ -1,11 +1,12 @@
 package hephaestus
-package platform
+package lunarg
+package tutorial
+
+import hephaestus.platform._
 
 import java.nio._
-import java.io._
 
-object Step11 extends Utils {
-
+object Step10 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 
@@ -44,42 +45,61 @@ object Step11 extends Utils {
     val descriptorPool = initDescriptorPool(device)
     val descriptorSets = initDescriptorSets(device, descriptorPool, descriptorSetLayout, buffer, uniformData.capacity)
 
-    val semaphore = initSemaphore(device)
+    val semaphoreCreateInfo = new Vulkan.SemaphoreCreateInfo(flags = 0)
+    val semaphore = vk.createSemaphore(device, semaphoreCreateInfo)
     val currentBuffer = vk.acquireNextImageKHR(device, swapchain, java.lang.Long.MAX_VALUE, semaphore, new Vulkan.Fence(0)) 
-    val renderPass = initRenderPass(device, swapchainFormat)
 
-    val vertexSpv = spvFile("vert.spv")
-    val fragSpv = spvFile("frag.spv")
-
-    val vertexModuleCreateInfo = new Vulkan.ShaderModuleCreateInfo(
-      flags = 0,
-      codeSize = vertexSpv.capacity,
-      pCode = vertexSpv
-    )
-    val vertexModule = vk.createShaderModule(device, vertexModuleCreateInfo)
-    val vertexShaderStage = new Vulkan.PipelineShaderStageCreateInfo(
-      flags = 0,
-      stage = Vulkan.SHADER_STAGE_VERTEX_BIT,
-      module = vertexModule,
-      pName = "main"
+    val colorAttachment = new Vulkan.AttachmentDescription(
+      format = swapchainFormat,
+      samples = Vulkan.SAMPLE_COUNT_1_BIT,
+      loadOp = Vulkan.ATTACHMENT_LOAD_OP_CLEAR,
+      storeOp = Vulkan.ATTACHMENT_STORE_OP_STORE,
+      stencilLoadOp = Vulkan.ATTACHMENT_LOAD_OP_DONT_CARE,
+      stencilStoreOp = Vulkan.ATTACHMENT_STORE_OP_DONT_CARE,
+      initialLayout = Vulkan.IMAGE_LAYOUT_UNDEFINED,
+      finalLayout = Vulkan.IMAGE_LAYOUT_PRESENT_SRC_KHR,
+      flags = 0
     )
 
-    val fragmentCreateInfo = new Vulkan.ShaderModuleCreateInfo(
-      flags = 0,
-      codeSize = fragSpv.capacity,
-      pCode = fragSpv
+    val depthAttachment = new Vulkan.AttachmentDescription(
+      format = Vulkan.FORMAT_D16_UNORM,
+      samples = Vulkan.SAMPLE_COUNT_1_BIT,
+      loadOp = Vulkan.ATTACHMENT_LOAD_OP_CLEAR,
+      storeOp = Vulkan.ATTACHMENT_STORE_OP_DONT_CARE,
+      stencilLoadOp = Vulkan.ATTACHMENT_LOAD_OP_DONT_CARE,
+      stencilStoreOp = Vulkan.ATTACHMENT_STORE_OP_DONT_CARE,
+      initialLayout = Vulkan.IMAGE_LAYOUT_UNDEFINED,
+      finalLayout = Vulkan.IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+      flags = 0
     )
 
-    val fragmentModule = vk.createShaderModule(device, fragmentCreateInfo)
-    val fragmentShaderStage = new Vulkan.PipelineShaderStageCreateInfo(
+    val colorReference = new Vulkan.AttachmentReference(attachment = 0, layout = Vulkan.IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    val depthReference = new Vulkan.AttachmentReference(attachment = 1, layout = Vulkan.IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+
+    val subpass = new Vulkan.SubpassDescription(
+      pipelineBindPoint = Vulkan.PIPELINE_BIND_POINT_GRAPHICS,
       flags = 0,
-      stage = Vulkan.SHADER_STAGE_FRAGMENT_BIT,
-      module = fragmentModule,
-      pName = "main"
+      inputAttachmentCount = 0,
+      pInputAttachments = Array.empty[Vulkan.AttachmentReference],
+      colorAttachmentCount = 1,
+      pColorAttachments = Array(colorReference),
+      pResolveAttachments = Array.empty[Vulkan.AttachmentReference],
+      pDepthStencilAttachment = Array(depthReference),
+      preserveAttachmentCount = 0,
+      pPreserveAttachments = Array.empty[Int]
     )
 
-    vk.destroyShaderModule(device, vertexModule)
-    vk.destroyShaderModule(device, fragmentModule)
+    val renderPassCreateInfo = new Vulkan.RenderPassCreateInfo(
+      flags = 0,
+      attachmentCount = 2,
+      pAttachments = Array(colorAttachment, depthAttachment),
+      subpassCount = 1,
+      pSubpasses = Array(subpass),
+      dependencyCount = 0,
+      pDependencies = Array.empty
+    )
+
+    val renderPass = vk.createRenderPass(device, renderPassCreateInfo)
 
     vk.destroyRenderPass(device, renderPass)
     vk.destroySemaphore(device, semaphore)

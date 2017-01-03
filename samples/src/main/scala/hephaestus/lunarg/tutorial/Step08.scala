@@ -1,9 +1,11 @@
 package hephaestus
-package platform
+package lunarg
+package tutorial
 
+import hephaestus.platform._
 import java.nio._
 
-object Step9 extends Utils {
+object Step08 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 
@@ -36,47 +38,27 @@ object Step9 extends Utils {
     val buffer = initBuffer(device, uniformData.capacity)
     val bufferMemory = initBufferMemory(device, memoryProperties, buffer, uniformData)
 
-    val descriptorSetLayout = initDescriptorSetLayout(device)
-    val pipelineLayout = initPipelineLayout(device, descriptorSetLayout)
-
-    //new code here
-    val descriptorPoolSize = new Vulkan.DescriptorPoolSize(
-      tpe = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      descriptorCount = 1)
-    val descriptorPoolCreateInfo = new Vulkan.DescriptorPoolCreateInfo(
+    val descriptorSetLayoutInfo = new Vulkan.DescriptorSetLayoutCreateInfo(
       flags = 0,
-      maxSets = 1,
-      poolSizeCount = 1,
-      pPoolSizes = Array(descriptorPoolSize)
-    )
-    val descriptorPool = vk.createDescriptorPool(device, descriptorPoolCreateInfo)
-    val descriptorSetAllocateInfo = new Vulkan.DescriptorSetAllocateInfo(
-      descriptorPool = descriptorPool,
-      descriptorSetCount = 1,
-      pSetLayouts = Array(descriptorSetLayout)
-    )
-
-    val descriptorSets = vk.allocateDescriptorSets(device, descriptorSetAllocateInfo)
-    val bufferInfo = new Vulkan.DescriptorBufferInfo(
-      buffer = buffer,
-      offset = new Vulkan.DeviceSize(0),
-      range = new Vulkan.DeviceSize(uniformData.capacity)
-    )
-    val writeDescriptorSet = new Vulkan.WriteDescriptorSet(
-      dstSet = descriptorSets(0),
-      dstBinding = 0,
-      dstArrayElement = 0,
-      descriptorCount = 1,
-      descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      pImageInfo = Array.empty[Vulkan.DescriptorImageInfo],
-      pBufferInfo = Array(bufferInfo),
-      pTexelBufferView = Array.empty[Vulkan.BufferView]
-    )
-
-    vk.updateDescriptorSets(device, 1, Array(writeDescriptorSet), 0, Array.empty[Vulkan.CopyDescriptorSet])
-
-    vk.freeDescriptorSets(device, descriptorPool, 1, descriptorSets)
-    vk.destroyDescriptorPool(device, descriptorPool)
+      bindingCount = 1,
+      pBindings = Array(new Vulkan.DescriptorSetLayoutBinding(
+        binding = 0,
+        descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        descriptorCount = 1,
+        stageFlags = Vulkan.SHADER_STAGE_VERTEX_BIT,
+        pImmutableSamplers = Array.empty[Vulkan.Sampler]
+      )))
+    println("create description")
+    val descriptorSetLayout = vk.createDescriptorSetLayout(device, descriptorSetLayoutInfo)
+    val pipelineLayoutInfo = new Vulkan.PipelineLayoutCreateInfo(
+      flags = 0,
+      setLayoutCount = 1,
+      pSetLayouts = Array(descriptorSetLayout),
+      pushConstantRangeCount = 0,
+      pPushConstantRanges = Array.empty[Int])
+    println("createPipelineLayout")
+    val pipelineLayout = vk.createPipelineLayout(device, pipelineLayoutInfo)
+    println("created pipeline")
 
     vk.destroyDescriptorSetLayout(device, descriptorSetLayout)
     vk.destroyPipelineLayout(device, pipelineLayout)

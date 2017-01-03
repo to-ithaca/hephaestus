@@ -1,18 +1,17 @@
 package hephaestus
-package platform
+package lunarg
+package tutorial
 
+import hephaestus.platform._
 import java.nio._
 
-object Step12 extends Utils {
-
+object Step09 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 
     val instance = initInstanceExtensions()
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
-    val width = 200
-    val height = 200
-    val window = glfw.createWindow(width, height, "foobar")
+    val window = glfw.createWindow(200, 200, "foobar")
     val surface = glfw.createWindowSurface(instance, window)
 
     val physicalDevice = vk.enumeratePhysicalDevices(instance)(0)
@@ -42,65 +41,51 @@ object Step12 extends Utils {
     val descriptorSetLayout = initDescriptorSetLayout(device)
     val pipelineLayout = initPipelineLayout(device, descriptorSetLayout)
 
-    val descriptorPool = initDescriptorPool(device)
-    val descriptorSets = initDescriptorSets(device, descriptorPool, descriptorSetLayout, buffer, uniformData.capacity)
+    //new code here
+    val descriptorPoolSize = new Vulkan.DescriptorPoolSize(
+      tpe = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      descriptorCount = 1)
+    val descriptorPoolCreateInfo = new Vulkan.DescriptorPoolCreateInfo(
+      flags = 0,
+      maxSets = 1,
+      poolSizeCount = 1,
+      pPoolSizes = Array(descriptorPoolSize)
+    )
+    val descriptorPool = vk.createDescriptorPool(device, descriptorPoolCreateInfo)
+    val descriptorSetAllocateInfo = new Vulkan.DescriptorSetAllocateInfo(
+      descriptorPool = descriptorPool,
+      descriptorSetCount = 1,
+      pSetLayouts = Array(descriptorSetLayout)
+    )
 
-    val semaphore = initSemaphore(device)
-    val currentBuffer = vk.acquireNextImageKHR(device, swapchain, java.lang.Long.MAX_VALUE, semaphore, new Vulkan.Fence(0)) 
-    val renderPass = initRenderPass(device, swapchainFormat)
+    val descriptorSets = vk.allocateDescriptorSets(device, descriptorSetAllocateInfo)
+    val bufferInfo = new Vulkan.DescriptorBufferInfo(
+      buffer = buffer,
+      offset = new Vulkan.DeviceSize(0),
+      range = new Vulkan.DeviceSize(uniformData.capacity)
+    )
+    val writeDescriptorSet = new Vulkan.WriteDescriptorSet(
+      dstSet = descriptorSets(0),
+      dstBinding = 0,
+      dstArrayElement = 0,
+      descriptorCount = 1,
+      descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      pImageInfo = Array.empty[Vulkan.DescriptorImageInfo],
+      pBufferInfo = Array(bufferInfo),
+      pTexelBufferView = Array.empty[Vulkan.BufferView]
+    )
 
-    val vertexModule = initShaderModule("vert.spv", device)
-    val fragmentModule = initShaderModule("frag.spv", device)
+    vk.updateDescriptorSets(device, 1, Array(writeDescriptorSet), 0, Array.empty[Vulkan.CopyDescriptorSet])
 
-    val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(flags = 0)
-    vk.beginCommandBuffer(commandBuffer, commandBufferBeginInfo)
-
-    val graphicsQueue = vk.getDeviceQueue(device, qi, 0)
-
-    val framebuffers = imageViews.map { v =>
-      val framebufferCreateInfo = new Vulkan.FramebufferCreateInfo(
-        flags = 0,
-        renderPass = renderPass,
-        attachmentCount = 2,
-        pAttachments = Array(v, depthImageView),
-        width = width,
-        height = height,
-        layers = 1
-      )
-      val framebuffer = vk.createFramebuffer(device, framebufferCreateInfo)
-      framebuffer
-    }
-
-    vk.endCommandBuffer(commandBuffer)
-
-    val fenceCreateInfo = new Vulkan.FenceCreateInfo(flags = 0)
-    val fence = vk.createFence(device, fenceCreateInfo)
-    val submitInfo = new Vulkan.SubmitInfo(
-      waitSemaphoreCount = 0,
-      pWaitSemaphores = Array.empty[Vulkan.Semaphore],
-      pWaitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-      commandBufferCount = 1,
-      pCommandBuffers = Array(commandBuffer),
-      signalSemaphoreCount = 0,
-      pSignalSemaphores = Array.empty[Vulkan.Semaphore])
-    vk.queueSubmit(graphicsQueue, 1, Array(submitInfo), fence)
-    vk.waitForFences(device, 1, Array(fence), true, 100000000)
-    vk.destroyFence(device, fence)
-
-    framebuffers.foreach { f =>
-      vk.destroyFramebuffer(device, f)
-    }
-
-    vk.destroyShaderModule(device, vertexModule)
-    vk.destroyShaderModule(device, fragmentModule)
-    vk.destroyRenderPass(device, renderPass)
-    vk.destroySemaphore(device, semaphore)
     vk.freeDescriptorSets(device, descriptorPool, 1, descriptorSets)
     vk.destroyDescriptorPool(device, descriptorPool)
+
     vk.destroyDescriptorSetLayout(device, descriptorSetLayout)
     vk.destroyPipelineLayout(device, pipelineLayout)
+
     vk.destroyBuffer(device, buffer)
     vk.freeMemory(device, bufferMemory)
+
     vk.destroyImageView(device, depthImageView)
     vk.freeMemory(device, depthImageMemory)
     vk.destroyImage(device, depthImage)

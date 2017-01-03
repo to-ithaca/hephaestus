@@ -1,5 +1,6 @@
 package hephaestus
-package platform
+package lunarg
+package tutorial
 
 import java.nio.{ByteBuffer, ByteOrder}
 

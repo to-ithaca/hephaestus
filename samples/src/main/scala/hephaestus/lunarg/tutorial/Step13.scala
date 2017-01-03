@@ -1,6 +1,8 @@
 package hephaestus
-package platform
+package lunarg
+package tutorial
 
+import hephaestus.platform._
 import java.nio._
 
 object Step13 extends Utils {

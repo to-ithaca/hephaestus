@@ -56,4 +56,10 @@ lazy val native = (project in file("native"))
     }
 )
 
-lazy val root = (project in file(".")).aggregate(core, native)
+lazy val samples = (project in file("samples"))
+  .settings(
+    moduleName := "hephaestus-samples",
+    buildSettings
+).dependsOn(core, native)
+
+lazy val root = (project in file(".")).aggregate(core, native, samples)
