@@ -411,7 +411,7 @@ object Vulkan {
     val setLayoutCount: Int,
     val pSetLayouts: Array[DescriptorSetLayout],
     val pushConstantRangeCount: Int,
-    val pPushConstantRanges: Array[Int]
+    val pPushConstantRanges: Array[PushConstantRange]
   )
 
   final class PipelineLayout(val ptr: Long) extends AnyVal
@@ -655,6 +655,7 @@ object Vulkan {
 
   final class FrontFace(val value: Int) extends AnyVal
   val FRONT_FACE_COUNTER_CLOCKWISE = new FrontFace(0)
+  val FRONT_FACE_CLOCKWISE = new FrontFace(1)
 
   final class PipelineRasterizationStateCreateInfo(
     val flags: Int,

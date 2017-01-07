@@ -13,8 +13,8 @@ object Step14 extends Utils {
     val instance = initInstanceExtensionsDebug()
 
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
-    val width = 200
-    val height = 200
+    val width = 500
+    val height = 500
     val window = glfw.createWindow(width, height, "foobar")
     val surface = glfw.createWindowSurface(instance, window)
 
@@ -38,8 +38,7 @@ object Step14 extends Utils {
     val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
-    val uniformData = ByteBuffer.allocateDirect(4 * 4)
-    .putFloat(1f).putFloat(2f).putFloat(3f).putFloat(4f)
+    val uniformData = Cube.uniformData(width, height)
     val buffer = initBuffer(device, uniformData.capacity)
     val bufferMemory = initBufferMemory(device, memoryProperties, buffer, uniformData)
 
@@ -121,7 +120,7 @@ object Step14 extends Utils {
       flags = 0,
       polygonMode = Vulkan.POLYGON_MODE_FILL,
       cullMode = Vulkan.CULL_MODE_BACK_BIT,
-      frontFace = Vulkan.FRONT_FACE_COUNTER_CLOCKWISE,
+      frontFace = Vulkan.FRONT_FACE_CLOCKWISE,
       depthClampEnable = true,
       rasterizerDiscardEnable = false,
       depthBiasEnable = false,
@@ -130,7 +129,6 @@ object Step14 extends Utils {
       depthBiasSlopeFactor = 0,
       lineWidth = 1f
     )
-
 
     val colorBlendAttachmentState = new Vulkan.PipelineColorBlendAttachmentState(
       colorWriteMask = 0xf,

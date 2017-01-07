@@ -44,6 +44,21 @@
   (*env)->CallFloatMethod(env, o, id);                       \
 })
 
+
+#define getFloatArray(env, cls, o, name) \
+({ \
+  jmethodID id = (*env)->GetMethodID(env, cls, name, "()[F"); \
+  jfloatArray a = (jfloatArray) (*env)->CallObjectMethod(env, o, id); \
+  (*env)->GetFloatArrayElements(env, a, 0); \
+})
+
+#define getIntArray(env, cls, o, name) \
+({ \
+  jmethodID id = (*env)->GetMethodID(env, cls, name, "()[I"); \
+  jintArray a = (jintArray) (*env)->CallObjectMethod(env, o, id); \
+  (*env)->GetIntArrayElements(env, a, 0); \
+})
+
 VkApplicationInfo applicationInfo(JNIEnv* env, jobject info) {
   jclass cls = (*env)->GetObjectClass(env, info);
   jmethodID pan_id = (*env)->GetMethodID(env, cls, "pApplicationName", "()Ljava/lang/String;");
@@ -272,8 +287,7 @@ VkDeviceQueueCreateInfo deviceQueueCreateInfo(JNIEnv* env, jobject info) {
   jclass cls = (*env)->GetObjectClass(env, info);
   jint count = getInt(env, cls, info, "queueCount");
   int index = getInt(env, cls, info, "queueFamilyIndex");
-  jmethodID p_id = (*env)->GetMethodID(env, cls, "pQueuePriorities", "()[F");
-  float* ps = (float*) (*env)->CallObjectMethod(env, info, p_id);
+  float* ps = getFloatArray(env, cls, info, "pQueuePriorities");
   float* ps_ptr = malloc(count * sizeof(float));
   *ps_ptr = *ps;
   VkDeviceQueueCreateInfo v_info = {
@@ -633,8 +647,7 @@ VkImageCreateInfo toImageCreateInfo(JNIEnv* env, jobject info) {
   jmethodID ext_id = (*env)->GetMethodID(env, cls, "extent", "()Lhephaestus/platform/Vulkan$Extent3D;");
   jobject ext_obj = (*env)->CallObjectMethod(env, info, ext_id);
   VkExtent3D ext = toExtent3D(env, ext_obj);
-  jmethodID qfics_id = (*env)->GetMethodID(env, cls, "pQueueFamilyIndices", "()[I");
-  jfloatArray qfics = (*env)->CallObjectMethod(env, info, qfics_id);
+  int32_t* qfcis = getIntArray(env, cls, info, "pQueueFamilyIndices");
   VkImageCreateInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
     .pNext = NULL,
@@ -857,7 +870,7 @@ VkPipelineLayoutCreateInfo toPipelineLayoutCreateInfo(JNIEnv* env, jobject info)
   jobjectArray sls_objs = (*env)->CallObjectMethod(env, info, sls_id);
   VkDescriptorSetLayout* sls = ITER(env, sls_objs, (uint32_t) slc, VkDescriptorSetLayout, toDescriptorSetLayout)
   int pcrc = getInt(env, cls, info, "pushConstantRangeCount");
-  jmethodID pcrs_id = (*env)->GetMethodID(env, cls, "pPushConstantRanges", "()[I");
+  jmethodID pcrs_id = (*env)->GetMethodID(env, cls, "pPushConstantRanges", "()[Lhephaestus/platform/Vulkan$PushConstantRange;");
   jobjectArray pcrs_objs = (*env)->CallObjectMethod(env, info, pcrs_id);
   VkPushConstantRange* pcrs = ITER(env, pcrs_objs, (uint32_t) pcrc, VkPushConstantRange, toPushConstantRange)
   VkPipelineLayoutCreateInfo v_info = {
@@ -1152,8 +1165,7 @@ VkSubpassDescription toSubpassDescription(JNIEnv* env, jobject o) {
   toAttachmentReferences(env, das_objs, das, 1);
   jmethodID pac_id = (*env)->GetMethodID(env, cls, "preserveAttachmentCount", "()I");
   jint pac = (*env)->CallIntMethod(env, o, pac_id);
-  jmethodID pas_id = (*env)->GetMethodID(env, cls, "pPreserveAttachments", "()[I");
-  jintArray pas = (jintArray)(*env)->CallObjectMethod(env, o, pas_id);
+  int32_t* pas = getIntArray(env, cls, o, "pPreserveAttachments");
 
   VkSubpassDescription d = {
     .flags = fs,
@@ -1302,8 +1314,7 @@ VkSubmitInfo toSubmitInfo(JNIEnv* env, jobject o) {
   jmethodID wss_id = (*env)->GetMethodID(env, cls, "pWaitSemaphores", "()[Lhephaestus/platform/Vulkan$Semaphore;");
   jobjectArray wss_objs = (*env)->CallObjectMethod(env, o, wss_id);
   VkSemaphore* wss = ITER(env, wss_objs, (uint32_t) wsc, VkSemaphore, toSemaphore)
-  jmethodID wdsm_id = (*env)->GetMethodID(env, cls, "pWaitDstStageMask", "()[I");
-  jintArray wdsm = (jintArray) (*env)->CallObjectMethod(env, o, wdsm_id);
+  int32_t* wdsm = getIntArray(env, cls, o, "pWaitDstStageMask");
   jmethodID cbc_id = (*env)->GetMethodID(env, cls, "commandBufferCount", "()I");
   jint cbc = (*env)->CallIntMethod(env, o, cbc_id);
   jmethodID cbs_id = (*env)->GetMethodID(env, cls, "pCommandBuffers", "()[Lhephaestus/platform/Vulkan$CommandBuffer;");
@@ -1460,22 +1471,19 @@ VkClearColorValue toClearColorValue(JNIEnv* env, jobject o) {
   jboolean is_ui = (*env)->IsInstanceOf(env, o, ui_cls);
   VkClearColorValue cv;
   if(is_f) {
-    jmethodID f_id = (*env)->GetMethodID(env, f_cls, "float32", "()[F");
-    float* fs = (float*) (*env)->CallObjectMethod(env, o, f_id);
+    float* fs = getFloatArray(env, f_cls, o, "float32");
     cv.float32[0] = fs[0];
     cv.float32[1] = fs[1];
     cv.float32[2] = fs[2];
     cv.float32[3] = fs[3];
   } else if(is_i) {
-    jmethodID i_id = (*env)->GetMethodID(env, i_cls, "int32", "()[I");
-    int32_t* is = (int32_t*) (*env)->CallObjectMethod(env, o, i_id);
+    int32_t* is = getIntArray(env, i_cls, o, "int32");
     cv.int32[0] = is[0];
     cv.int32[1] = is[1];
     cv.int32[2] = is[2];
     cv.int32[3] = is[3];
   } else if(is_ui) {
-    jmethodID ui_id = (*env)->GetMethodID(env, ui_cls, "uint32", "()[I");
-    uint32_t* uis = (uint32_t*) (*env)->CallObjectMethod(env, o, ui_id);
+    uint32_t* uis = getIntArray(env, ui_cls, o, "uint32");
     cv.uint32[0] = uis[0];
     cv.uint32[1] = uis[1];
     cv.uint32[2] = uis[2];
@@ -1534,7 +1542,7 @@ VkRenderPassBeginInfo toRenderPassBeginInfo(JNIEnv* env, jobject o) {
   jint cvc = (*env)->CallIntMethod(env, o, cvc_id);
   jmethodID cvs_id = (*env)->GetMethodID(env, cls, "pClearValues", "()[Lhephaestus/platform/Vulkan$ClearValue;");
   jobjectArray cvs_objs = (*env)->CallObjectMethod(env, o, cvs_id);
-  VkClearValue* cvs = ITER(env, cvs_objs, (uint32_t) cvc, VkClearValue, toClearValue)
+  VkClearValue* cvs = ITER(env, cvs_objs, (uint32_t) cvc, VkClearValue, toClearValue);
 
   VkRenderPassBeginInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -1902,8 +1910,7 @@ VkPipelineColorBlendStateCreateInfo toPipelineColorBlendStateCreateInfo(JNIEnv* 
   jmethodID cbas_id = (*env)->GetMethodID(env, cls, "pAttachments", "()[Lhephaestus/platform/Vulkan$PipelineColorBlendAttachmentState;");
   jobjectArray cbas_objs = (*env)->CallObjectMethod(env, o, cbas_id);
   VkPipelineColorBlendAttachmentState* cbas = ITER(env, cbas_objs, (uint32_t) ac, VkPipelineColorBlendAttachmentState, toPipelineColorBlendAttachmentState)
-  jmethodID bc_id = (*env)->GetMethodID(env, cls, "blendConstants", "()[F");
-  float* bc = (float *) (*env)->CallObjectMethod(env, o, bc_id);
+  float* bc = getFloatArray(env, cls, o, "blendConstants");
 
   VkPipelineColorBlendStateCreateInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -2174,7 +2181,7 @@ VkBool32 debugCallback(
 }
 
 JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_debugReport
-(JNIEnv* env, jobject instance __attribute__((unused)), jlong inst) {
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong inst) {
   VkDebugReportCallbackCreateInfoEXT info = {
     .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
     .pNext = NULL,

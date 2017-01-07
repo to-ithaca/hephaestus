@@ -363,7 +363,7 @@ trait Utils {
       setLayoutCount = 1,
       pSetLayouts = Array(descriptorSetLayout),
       pushConstantRangeCount = 0,
-      pPushConstantRanges = Array.empty[Int])
+      pPushConstantRanges = Array.empty)
     vk.createPipelineLayout(device, pipelineLayoutInfo)
   }
 
@@ -601,7 +601,7 @@ trait Utils {
       flags = 0,
       polygonMode = Vulkan.POLYGON_MODE_FILL,
       cullMode = Vulkan.CULL_MODE_BACK_BIT,
-      frontFace = Vulkan.FRONT_FACE_COUNTER_CLOCKWISE,
+      frontFace = Vulkan.FRONT_FACE_CLOCKWISE,
       depthClampEnable = true,
       rasterizerDiscardEnable = false,
       depthBiasEnable = false,

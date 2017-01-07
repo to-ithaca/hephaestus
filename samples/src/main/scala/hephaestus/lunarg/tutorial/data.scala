@@ -3,28 +3,28 @@ package lunarg
 package tutorial
 
 import java.nio.{ByteBuffer, ByteOrder}
+import com.hackoeur.jglm._
+import com.hackoeur.jglm.support._
 
 object Cube {
 
-  case class Vec2(x0: Float, x1: Float)
   case class Vec4(x0: Float, x1: Float, x2: Float, x3: Float)
   case class Vertex(position: Vec4, color: Vec4)
-  case class VertexUV(position: Vec4, uv: Vec2)
 
   def XYZ1(x: Float, y: Float, z: Float): Vec4 = Vec4(x, y, z, 1f)
   def XYZ1(x: Int, y: Int, z: Int): Vec4 = Vec4(x.toFloat, y.toFloat, z.toFloat, 1f)
-  def UV(u: Float, v: Float): Vec2 = Vec2(u, v)
 
-  def insert(b: ByteBuffer, v: Vec4): Unit = {
-    b.putFloat(v.x0).putFloat(v.x1).putFloat(v.x2).putFloat(v.x3)
+  def toArray(vs: List[Vertex]): Array[Float] = {
+    vs.flatMap { v =>
+      List(
+        v.position.x0, v.position.x1, v.position.x2, v.position.x3,
+        v.color.x0, v.color.x1, v.color.x2, v.color.x3)
+    }.toArray
   }
   def buffer(vs: List[Vertex]): ByteBuffer = {
-    val b = ByteBuffer.allocateDirect(vs.size * (2 * 4 * 4)).order(ByteOrder.nativeOrder()) //6 * 6 vertices
-    vs.foreach { v => 
-      insert(b, v.position)
-      insert(b, v.color)
-    }
-    // b.rewind
+    val arr = toArray(vs)
+    val b = ByteBuffer.allocateDirect(arr.size * 4).order(ByteOrder.nativeOrder())
+    b.asFloatBuffer().put(arr, 0, arr.size)
     b
   }
 
@@ -36,6 +36,7 @@ object Cube {
     Vertex(XYZ1( 1,-1, 1), XYZ1(1f, 0f, 0f)),
     Vertex(XYZ1(-1, 1, 1), XYZ1(1f, 0f, 0f)),
     Vertex(XYZ1( 1, 1, 1), XYZ1(1f, 0f, 0f)),
+
     //greenface
     Vertex(XYZ1(-1,-1,-1), XYZ1(0f, 1f, 0f)),
     Vertex(XYZ1( 1,-1,-1), XYZ1(0f, 1f, 0f)),
@@ -75,106 +76,27 @@ object Cube {
 
   val solidFaceColorsData: ByteBuffer = buffer(solidFaceColors)
 
-  val matrix = Array(
-    0.5f, 0f, 0f, 0f,
-    0f, 0.5f, 0f, 0f,
-    0f, 0f, 0.5f, 0f,
-    0f, 0f, 0f, 1f)
- 
-  val uniformData: ByteBuffer = {
-    val buf = ByteBuffer.allocateDirect(matrix.size * 4).order(ByteOrder.nativeOrder())
-    buf.asFloatBuffer().put(matrix, 0, matrix.size)
+  def uniformData(width: Int, height: Int): ByteBuffer = {
+    val aspect = if(width > height) height.toFloat / width.toFloat else 1f
+    val fov = aspect * 45.0f
+    val projection = Matrices.perspective(fov, width.toFloat / height.toFloat, 0.1f, 100.0f)
+    val view = Matrices.lookAt(
+      new Vec3(-5f, 3f, -10f),
+      new Vec3(0f, 0f, 0f),
+      new Vec3(0f, -1f, 0f))
+    val model = Mat4.MAT4_IDENTITY
+    val clip = new Mat4(
+      1.0f, 0.0f, 0.0f, 0.0f,
+      0.0f, -1.0f, 0.0f, 0.0f,
+      0.0f, 0.0f, 0.5f, 0.5f,
+      0.0f, 0.0f, 0.0f, 1.0f).transpose
+    val mvp =  clip.multiply(projection).multiply(view).multiply(model)
+
+    val fbuf = mvp.getBuffer()
+    val fs = new Array[Float](fbuf.capacity())
+    fbuf.get(fs)
+    val buf = ByteBuffer.allocateDirect(fs.size * 4).order(ByteOrder.nativeOrder())
+    buf.asFloatBuffer().put(fs, 0, fs.size)
     buf
   }
 }
-
-
-// static const Vertex g_vbData[] = {
-//     {XYZ1(-1, -1, -1), XYZ1(0.f, 0.f, 0.f)},
-//     {XYZ1(1, -1, -1), XYZ1(1.f, 0.f, 0.f)},
-//     {XYZ1(-1, 1, -1), XYZ1(0.f, 1.f, 0.f)},
-//     {XYZ1(-1, 1, -1), XYZ1(0.f, 1.f, 0.f)},
-//     {XYZ1(1, -1, -1), XYZ1(1.f, 0.f, 0.f)},
-//     {XYZ1(1, 1, -1), XYZ1(1.f, 1.f, 0.f)},
-
-//     {XYZ1(-1, -1, 1), XYZ1(0.f, 0.f, 1.f)},
-//     {XYZ1(-1, 1, 1), XYZ1(0.f, 1.f, 1.f)},
-//     {XYZ1(1, -1, 1), XYZ1(1.f, 0.f, 1.f)},
-//     {XYZ1(1, -1, 1), XYZ1(1.f, 0.f, 1.f)},
-//     {XYZ1(-1, 1, 1), XYZ1(0.f, 1.f, 1.f)},
-//     {XYZ1(1, 1, 1), XYZ1(1.f, 1.f, 1.f)},
-
-//     {XYZ1(1, 1, 1), XYZ1(1.f, 1.f, 1.f)},
-//     {XYZ1(1, 1, -1), XYZ1(1.f, 1.f, 0.f)},
-//     {XYZ1(1, -1, 1), XYZ1(1.f, 0.f, 1.f)},
-//     {XYZ1(1, -1, 1), XYZ1(1.f, 0.f, 1.f)},
-//     {XYZ1(1, 1, -1), XYZ1(1.f, 1.f, 0.f)},
-//     {XYZ1(1, -1, -1), XYZ1(1.f, 0.f, 0.f)},
-
-//     {XYZ1(-1, 1, 1), XYZ1(0.f, 1.f, 1.f)},
-//     {XYZ1(-1, -1, 1), XYZ1(0.f, 0.f, 1.f)},
-//     {XYZ1(-1, 1, -1), XYZ1(0.f, 1.f, 0.f)},
-//     {XYZ1(-1, 1, -1), XYZ1(0.f, 1.f, 0.f)},
-//     {XYZ1(-1, -1, 1), XYZ1(0.f, 0.f, 1.f)},
-//     {XYZ1(-1, -1, -1), XYZ1(0.f, 0.f, 0.f)},
-
-//     {XYZ1(1, 1, 1), XYZ1(1.f, 1.f, 1.f)},
-//     {XYZ1(-1, 1, 1), XYZ1(0.f, 1.f, 1.f)},
-//     {XYZ1(1, 1, -1), XYZ1(1.f, 1.f, 0.f)},
-//     {XYZ1(1, 1, -1), XYZ1(1.f, 1.f, 0.f)},
-//     {XYZ1(-1, 1, 1), XYZ1(0.f, 1.f, 1.f)},
-//     {XYZ1(-1, 1, -1), XYZ1(0.f, 1.f, 0.f)},
-
-//     {XYZ1(1, -1, 1), XYZ1(1.f, 0.f, 1.f)},
-//     {XYZ1(1, -1, -1), XYZ1(1.f, 0.f, 0.f)},
-//     {XYZ1(-1, -1, 1), XYZ1(0.f, 0.f, 1.f)},
-//     {XYZ1(-1, -1, 1), XYZ1(0.f, 0.f, 1.f)},
-//     {XYZ1(1, -1, -1), XYZ1(1.f, 0.f, 0.f)},
-//     {XYZ1(-1, -1, -1), XYZ1(0.f, 0.f, 0.f)},
-// };
-
-
-// static const VertexUV g_vb_texture_Data[] = {
-//     //left face
-//     {XYZ1(-1,-1,-1), UV(1.f, 0.f)},  // lft-top-front
-//     {XYZ1(-1, 1, 1), UV(0.f, 1.f)},  // lft-btm-back
-//     {XYZ1(-1,-1, 1), UV(0.f, 0.f)},  // lft-top-back
-//     {XYZ1(-1, 1, 1), UV(0.f, 1.f)},  // lft-btm-back
-//     {XYZ1(-1,-1,-1), UV(1.f, 0.f)},  // lft-top-front
-//     {XYZ1(-1, 1,-1), UV(1.f, 1.f)},  // lft-btm-front
-//     //front face
-//     {XYZ1(-1,-1,-1), UV(0.f, 0.f)},  // lft-top-front
-//     {XYZ1( 1,-1,-1), UV(1.f, 0.f)},  // rgt-top-front
-//     {XYZ1( 1, 1,-1), UV(1.f, 1.f)},  // rgt-btm-front
-//     {XYZ1(-1,-1,-1), UV(0.f, 0.f)},  // lft-top-front
-//     {XYZ1( 1, 1,-1), UV(1.f, 1.f)},  // rgt-btm-front
-//     {XYZ1(-1, 1,-1), UV(0.f, 1.f)},  // lft-btm-front
-//     //top face
-//     {XYZ1(-1,-1,-1), UV(0.f, 1.f)},  // lft-top-front
-//     {XYZ1( 1,-1, 1), UV(1.f, 0.f)},  // rgt-top-back
-//     {XYZ1( 1,-1,-1), UV(1.f, 1.f)},  // rgt-top-front
-//     {XYZ1(-1,-1,-1), UV(0.f, 1.f)},  // lft-top-front
-//     {XYZ1(-1,-1, 1), UV(0.f, 0.f)},  // lft-top-back
-//     {XYZ1( 1,-1, 1), UV(1.f, 0.f)},  // rgt-top-back
-//     //bottom face
-//     {XYZ1(-1, 1,-1), UV(0.f, 0.f)},  // lft-btm-front
-//     {XYZ1( 1, 1, 1), UV(1.f, 1.f)},  // rgt-btm-back
-//     {XYZ1(-1, 1, 1), UV(0.f, 1.f)},  // lft-btm-back
-//     {XYZ1(-1, 1,-1), UV(0.f, 0.f)},  // lft-btm-front
-//     {XYZ1( 1, 1,-1), UV(1.f, 0.f)},  // rgt-btm-front
-//     {XYZ1( 1, 1, 1), UV(1.f, 1.f)},  // rgt-btm-back
-//     //right face
-//     {XYZ1( 1, 1,-1), UV(0.f, 1.f)},  // rgt-btm-front
-//     {XYZ1( 1,-1, 1), UV(1.f, 0.f)},  // rgt-top-back
-//     {XYZ1( 1, 1, 1), UV(1.f, 1.f)},  // rgt-btm-back
-//     {XYZ1( 1,-1, 1), UV(1.f, 0.f)},  // rgt-top-back
-//     {XYZ1( 1, 1,-1), UV(0.f, 1.f)},  // rgt-btm-front
-//     {XYZ1( 1,-1,-1), UV(0.f, 0.f)},  // rgt-top-front
-//     //back face
-//     {XYZ1(-1, 1, 1), UV(1.f, 1.f)},  // lft-btm-back
-//     {XYZ1( 1, 1, 1), UV(0.f, 1.f)},  // rgt-btm-back
-//     {XYZ1(-1,-1, 1), UV(1.f, 0.f)},  // lft-top-back
-//     {XYZ1(-1,-1, 1), UV(1.f, 0.f)},  // lft-top-back
-//     {XYZ1( 1, 1, 1), UV(0.f, 1.f)},  // rgt-btm-back
-//     {XYZ1( 1,-1, 1), UV(0.f, 0.f)},  // rgt-top-back
-// };
