@@ -11,7 +11,9 @@ object Step07 extends Utils {
 
     val instance = initInstanceExtensions()
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
-    val window = glfw.createWindow(200, 200, "foobar")
+    val width = 500
+    val height = 500
+    val window = glfw.createWindow(width, height, "foobar")
     val surface = glfw.createWindowSurface(instance, window)
 
     val physicalDevice = vk.enumeratePhysicalDevices(instance)(0)
@@ -33,8 +35,7 @@ object Step07 extends Utils {
     val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
-    val uniformData = ByteBuffer.allocateDirect(4 * 4)
-    .putFloat(1f).putFloat(2f).putFloat(3f).putFloat(4f)
+    val uniformData = Cube.uniformData(width, height)
     val bufferCreateInfo = new Vulkan.BufferCreateInfo(
       usage = Vulkan.BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       size = new Vulkan.DeviceSize(uniformData.capacity),

@@ -13,8 +13,8 @@ object Step15 extends Utils {
     val instance = initInstanceExtensions()
 
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
-    val width = 200
-    val height = 200
+    val width = 500
+    val height = 500
     val window = glfw.createWindow(width, height, "foobar")
     val surface = glfw.createWindowSurface(instance, window)
 
@@ -38,7 +38,7 @@ object Step15 extends Utils {
     val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
-    val uniformData = Cube.uniformData
+    val uniformData = Cube.uniformData(width, height)
     val buffer = initBuffer(device, uniformData.capacity)
     val bufferMemory = initBufferMemory(device, memoryProperties, buffer, uniformData)
 
@@ -73,12 +73,9 @@ object Step15 extends Utils {
     beginRenderPass(commandBuffer, renderPass, currentBuffer, framebuffers, width, height, Array(clearValues0, clearValues1)) 
 
     //code start
-    println("start")
     vk.cmdBindPipeline(commandBuffer, Vulkan.PIPELINE_BIND_POINT_GRAPHICS, pipeline)
-    println("bindDescriptorSets")
     vk.cmdBindDescriptorSets(commandBuffer, Vulkan.PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
       0, descriptorSets.size, descriptorSets, 0, Array.empty)
-    println("vertexBuffes")
     vk.cmdBindVertexBuffers(commandBuffer, 0, 1, Array(vertexBuffer), Array(new Vulkan.DeviceSize(0)))
     val viewport = new Vulkan.Viewport(
       height = height,
@@ -87,15 +84,12 @@ object Step15 extends Utils {
       maxDepth = 1f,
       x = 0,
       y = 0)
-    println("cmdSetViewport")
     vk.cmdSetViewport(commandBuffer, 0, 1, Array(viewport))
     val scissor = new Vulkan.Rect2D(
       extent = new Vulkan.Extent2D(width = width, height = height),
       offset = new Vulkan.Offset2D(x = 0, y = 0)
     )
-    println("cmdSetScissor")
     vk.cmdSetScissor(commandBuffer, 0, 1, Array(scissor))
-    println("cmddraw")
     vk.cmdDraw(commandBuffer, 12 * 3, 1, 0, 0)
     //code end
 
@@ -104,7 +98,6 @@ object Step15 extends Utils {
 
     val fence = initFence(device)
     //wait for the semaphore
-    println("submitQueueWait")
     submitQueueWait(device, fence, commandBuffer, graphicsQueue, semaphore)
 
     //code start
@@ -115,7 +108,6 @@ object Step15 extends Utils {
       pWaitSemaphores = Array.empty,
       waitSemaphoreCount = 0)
 
-    println("queuePresentKHR")
     vk.queuePresentKHR(graphicsQueue, presentInfo)
     Thread.sleep(1000)
     //code end
