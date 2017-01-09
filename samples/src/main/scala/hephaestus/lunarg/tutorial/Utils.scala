@@ -61,6 +61,32 @@ trait Utils {
     vk.createDevice(physicalDevice, dinfo)
   }
 
+  def initDeviceDebug(physicalDevice: Vulkan.PhysicalDevice): Vulkan.Device = {
+    val qfps = vk.getPhysicalDeviceQueueFamilyProperties(physicalDevice)
+
+    val qi = qfps.zipWithIndex.find {
+      case (q, i) => (q.queueFlags & Vulkan.QUEUE_GRAPHICS_BIT) > 0
+    }.map(_._2).get
+
+    val dqinfo = new Vulkan.DeviceQueueCreateInfo(
+      pNext = 0,
+      flags = 0,
+      queueFamilyIndex = qi,
+      queueCount = 1,
+      pQueuePriorities = Array(0f)
+    )
+    val dinfo = new Vulkan.DeviceCreateInfo(
+      pNext = 0,
+      flags = 0,
+      queueCreateInfoCount = 1,
+      pQueueCreateInfos = Array(dqinfo),
+      enabledLayerCount = 1,
+      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_API_DUMP_NAME),
+      enabledExtensionCount = 0,
+      ppEnabledExtensionNames = Array.empty[String])
+    vk.createDevice(physicalDevice, dinfo)
+  }
+
   def initGraphicsQueueFamilyIndex(physicalDevice: Vulkan.PhysicalDevice): Int = {
     val qfps = vk.getPhysicalDeviceQueueFamilyProperties(physicalDevice)
     qfps.zipWithIndex.find {
@@ -84,7 +110,7 @@ trait Utils {
       enabledExtensionCount = extensions.size,
       ppEnabledExtensionNames = extensions,
       enabledLayerCount = 0,
-      ppEnabledLayerNames = Array.empty[String]
+      ppEnabledLayerNames = Array.empty
     )
     vk.createInstance(instanceCreateInfo)
   }
@@ -105,11 +131,45 @@ trait Utils {
       pApplicationInfo = appInfo,
       enabledExtensionCount = extensions.size,
       ppEnabledExtensionNames = extensions,
-      enabledLayerCount = 1,
-      ppEnabledLayerNames = Array("VK_LAYER_LUNARG_standard_validation")
+      enabledLayerCount = 2,
+      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_STANDARD_VALIDATION_NAME, Vulkan.LAYER_LUNARG_API_DUMP_NAME)
     )
     val inst = vk.createInstance(instanceCreateInfo)
     vk.debugReport(inst)
+    val supportedExtensions = vk.enumerateInstanceLayerProperties.map(_.layerName)
+    val apiProps = vk.enumerateInstanceExtensionProperties(Vulkan.LAYER_LUNARG_API_DUMP_NAME)
+    val debugProps = vk.enumerateInstanceExtensionProperties(Vulkan.LAYER_LUNARG_STANDARD_VALIDATION_NAME)
+    println(s"supported ${supportedExtensions.toList}")
+    println(s"api props ${apiProps.map(_.extensionName).toList}")
+    println(s"debug props ${debugProps.map(_.extensionName).toList}")
+    inst
+  }
+  def initInstanceExtensionsDump(): Vulkan.Instance = {
+    val appInfo = new Vulkan.ApplicationInfo(
+      pNext = 0,
+      pApplicationName = "helloWorld",
+      applicationVersion = 1,
+      pEngineName = "helloWorld",
+      engineVersion = 1,
+      apiVersion = Vulkan.API_VERSION_1_0
+    )
+    val extensions = glfw.getRequiredInstanceExtensions()
+    println(s"extensions should be ${extensions.toList}")
+    val instanceCreateInfo = new Vulkan.InstanceCreateInfo(
+      pNext = 0,
+      pApplicationInfo = appInfo,
+      enabledExtensionCount = extensions.size,
+      ppEnabledExtensionNames = extensions,
+      enabledLayerCount = 1,
+      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_API_DUMP_NAME)
+    )
+    val inst = vk.createInstance(instanceCreateInfo)
+    val supportedExtensions = vk.enumerateInstanceLayerProperties.map(_.layerName)
+    val apiProps = vk.enumerateInstanceExtensionProperties(Vulkan.LAYER_LUNARG_API_DUMP_NAME)
+    val debugProps = vk.enumerateInstanceExtensionProperties(Vulkan.LAYER_LUNARG_STANDARD_VALIDATION_NAME)
+    println(s"supported ${supportedExtensions.toList}")
+    println(s"api props ${apiProps.map(_.extensionName).toList}")
+    println(s"debug props ${debugProps.map(_.extensionName).toList}")
     inst
   }
 
@@ -137,7 +197,26 @@ trait Utils {
       queueCreateInfoCount = 1,
       pQueueCreateInfos = Array(dqinfo),
       enabledLayerCount = 0,
-      ppEnabledLayerNames = Array.empty[String],
+      ppEnabledLayerNames = Array.empty,
+      enabledExtensionCount = 1,
+      ppEnabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME))
+    vk.createDevice(physicalDevice, dinfo)
+  }
+  def initDeviceExtensionsDebug(physicalDevice: Vulkan.PhysicalDevice, qi: Int): Vulkan.Device = {
+    val dqinfo = new Vulkan.DeviceQueueCreateInfo(
+      pNext = 0,
+      flags = 0,
+      queueFamilyIndex = qi,
+      queueCount = 1,
+      pQueuePriorities = Array(0f)
+    )
+    val dinfo = new Vulkan.DeviceCreateInfo(
+      pNext = 0,
+      flags = 0,
+      queueCreateInfoCount = 1,
+      pQueueCreateInfos = Array(dqinfo),
+      enabledLayerCount = 2,
+      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_API_DUMP_NAME, Vulkan.LAYER_LUNARG_STANDARD_VALIDATION_NAME),
       enabledExtensionCount = 1,
       ppEnabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME))
     vk.createDevice(physicalDevice, dinfo)

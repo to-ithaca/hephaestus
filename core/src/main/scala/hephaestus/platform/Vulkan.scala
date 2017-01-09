@@ -779,6 +779,8 @@ object Vulkan {
     val extensionName: String,
     val specVersion: Int)
   val EXT_DEBUG_REPORT_EXTENSION_NAME: String = "VK_EXT_debug_report"
+  val LAYER_LUNARG_API_DUMP_NAME = "VK_LAYER_LUNARG_api_dump"
+  val LAYER_LUNARG_STANDARD_VALIDATION_NAME = "VK_LAYER_LUNARG_standard_validation"
 
   final class Result(val value: Long) extends AnyVal
   val TIMEOUT = new Result(2)

@@ -111,6 +111,8 @@ VkInstanceCreateInfo instanceCreateInfo(JNIEnv* env, jobject info) {
   jobjectArray eln_objs = (*env)->CallObjectMethod(env, info, eln_id);
   const char** elns = malloc(elc * sizeof(char*));
   stringEls(env, eln_objs, elns, elc);
+  fprintf(stdout, "\n\nlayers are %s %s\n\n", elns[0], elns[1]);
+  fflush(stdout);
   VkInstanceCreateInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
     .pNext = NULL,

@@ -10,7 +10,7 @@ object Step15 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 
-    val instance = initInstanceExtensions()
+    val instance = initInstanceExtensionsDump()
 
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
     val width = 500
