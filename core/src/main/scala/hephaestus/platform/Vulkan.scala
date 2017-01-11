@@ -73,6 +73,7 @@ class Vulkan {
   @native def endCommandBuffer(buffer: CommandBuffer): Unit
   @native def createFence(device: Device, info: FenceCreateInfo): Fence
   @native def destroyFence(device: Device, fence: Fence): Unit
+  @native def resetFences(device: Device, count: Int, fences: Array[Fence]): Unit
   @native def queueSubmit(queue: Queue, submitCount: Int, pSubmits: Array[SubmitInfo], fence: Fence): Unit
   @native def waitForFences(device: Device, fenceCount: Int, pFences: Array[Fence], waitAll: Boolean, timeout: Long): Result
   @native def createFramebuffer(device: Device, info: FramebufferCreateInfo): Framebuffer
@@ -82,6 +83,7 @@ class Vulkan {
   @native def cmdBeginRenderPass(buffer: CommandBuffer, info: RenderPassBeginInfo, contents: SubpassContents): Unit
   @native def cmdBindVertexBuffers(commandBuffer: CommandBuffer, firstBinding: Int, bindingCount: Int, buffers: Array[Buffer], offsets: Array[DeviceSize]): Unit
   @native def cmdEndRenderPass(buffer: CommandBuffer): Unit
+  @native def cmdExecuteCommands(buffer: CommandBuffer, count: Int, buffers: Array[CommandBuffer]): Unit
 
   @native def createGraphicsPipelines(device: Device, count: Int, infos: Array[GraphicsPipelineCreateInfo]): Array[Pipeline]
   @native def destroyPipeline(device: Device, pipeline: Pipeline)

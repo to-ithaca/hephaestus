@@ -1374,6 +1374,12 @@ JNIEXPORT jlong JNICALL Java_hephaestus_platform_Vulkan_waitForFences
   return (jlong) r;
 }
 
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_resetFences
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong device, jint count, jobjectArray fences) {
+  VkFence* v_fences = ITER(env, fences, (uint32_t) count, VkFence, toFence)
+  RES(vkResetFences((VkDevice) device, count, v_fences));
+}
+
 VkImageView toImageView(JNIEnv* env, jobject o) {
   jclass cls = (*env)->GetObjectClass(env, o);
   jmethodID ptr_id = (*env)->GetMethodID(env, cls, "ptr", "()J");
