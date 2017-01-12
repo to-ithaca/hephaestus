@@ -73,6 +73,7 @@ class Vulkan {
   @native def endCommandBuffer(buffer: CommandBuffer): Unit
   @native def createFence(device: Device, info: FenceCreateInfo): Fence
   @native def destroyFence(device: Device, fence: Fence): Unit
+  @native def resetFences(device: Device, count: Int, fences: Array[Fence]): Unit
   @native def queueSubmit(queue: Queue, submitCount: Int, pSubmits: Array[SubmitInfo], fence: Fence): Unit
   @native def waitForFences(device: Device, fenceCount: Int, pFences: Array[Fence], waitAll: Boolean, timeout: Long): Result
   @native def createFramebuffer(device: Device, info: FramebufferCreateInfo): Framebuffer
@@ -82,6 +83,7 @@ class Vulkan {
   @native def cmdBeginRenderPass(buffer: CommandBuffer, info: RenderPassBeginInfo, contents: SubpassContents): Unit
   @native def cmdBindVertexBuffers(commandBuffer: CommandBuffer, firstBinding: Int, bindingCount: Int, buffers: Array[Buffer], offsets: Array[DeviceSize]): Unit
   @native def cmdEndRenderPass(buffer: CommandBuffer): Unit
+  @native def cmdExecuteCommands(buffer: CommandBuffer, count: Int, buffers: Array[CommandBuffer]): Unit
 
   @native def createGraphicsPipelines(device: Device, count: Int, infos: Array[GraphicsPipelineCreateInfo]): Array[Pipeline]
   @native def destroyPipeline(device: Device, pipeline: Pipeline)
@@ -198,9 +200,15 @@ object Vulkan {
 
   final class Device(val ptr: Long) extends AnyVal
 
+  class CommandPoolCreateFlag(val value: Int) extends AnyVal
+  val COMMAND_POOL_BLANK_FLAG = new CommandPoolCreateFlag(0)
+  val COMMAND_POOL_CREATE_TRANSIENT_BIT = new CommandPoolCreateFlag(0X00000001)
+  val COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = new CommandPoolCreateFlag(0X00000002)
+  val COMMAND_POOL_CREATE_FLAG_BITS_MAX_ENUM = new CommandPoolCreateFlag(0X7FFFFFFF)
+
   final class CommandPoolCreateInfo(
     val pNext: Long,
-    val flags: Int,
+    val flags: CommandPoolCreateFlag,
     val queueFamilyIndex: Int
   )
 
@@ -565,7 +573,18 @@ object Vulkan {
 
   final class Framebuffer(val ptr: Long) extends AnyVal
 
-  final class CommandBufferBeginInfo(val flags: Int) extends AnyVal
+  final class CommandBufferUsageFlag(val value: Int) extends AnyVal {
+    def |(o: CommandBufferUsageFlag): CommandBufferUsageFlag = new CommandBufferUsageFlag(value | o.value)
+  }
+  val COMMAND_BUFFER_USAGE_BLANK_FLAG = new CommandBufferUsageFlag(0)
+  val COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT = new CommandBufferUsageFlag(0x00000001)
+  val COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT = new CommandBufferUsageFlag(0x00000002)
+  val COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT = new CommandBufferUsageFlag(0x00000004)
+  val COMMAND_BUFFER_USAGE_FLAG_BITS_MAX_ENUM = new CommandBufferUsageFlag(0x7FFFFFFF)
+
+  final class CommandBufferInheritanceInfo(val renderPass: RenderPass)
+  val COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE = new CommandBufferInheritanceInfo(new RenderPass(0))
+  final class CommandBufferBeginInfo(val flags: CommandBufferUsageFlag, val inheritanceInfo: CommandBufferInheritanceInfo)
 
   final class Queue(val ptr: Long) extends AnyVal
 
@@ -619,6 +638,7 @@ object Vulkan {
 
   final class SubpassContents(val contents: Int) extends AnyVal
   val SUBPASS_CONTENTS_INLINE = new SubpassContents(0) 
+  val SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS = new SubpassContents(1)
 
   final class DynamicState(val value: Int) extends AnyVal
 
@@ -779,6 +799,8 @@ object Vulkan {
     val extensionName: String,
     val specVersion: Int)
   val EXT_DEBUG_REPORT_EXTENSION_NAME: String = "VK_EXT_debug_report"
+  val LAYER_LUNARG_API_DUMP_NAME = "VK_LAYER_LUNARG_api_dump"
+  val LAYER_LUNARG_STANDARD_VALIDATION_NAME = "VK_LAYER_LUNARG_standard_validation"
 
   final class Result(val value: Long) extends AnyVal
   val TIMEOUT = new Result(2)
