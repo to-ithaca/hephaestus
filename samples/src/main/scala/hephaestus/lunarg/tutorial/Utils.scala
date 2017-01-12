@@ -225,7 +225,7 @@ trait Utils {
   def initCommandPool(device: Vulkan.Device, qi: Int): Vulkan.CommandPool = {
     val commandPoolInfo = new Vulkan.CommandPoolCreateInfo(
       pNext = 0,
-      flags = 0,
+      flags = Vulkan.COMMAND_POOL_BLANK_FLAG,
       queueFamilyIndex = qi)
     vk.createCommandPool(device, commandPoolInfo)
   }

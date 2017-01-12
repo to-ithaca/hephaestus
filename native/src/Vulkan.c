@@ -44,6 +44,11 @@
   (*env)->CallFloatMethod(env, o, id);                       \
 })
 
+#define getLong(env, cls, o, name) \
+({ \
+  jmethodID id = (*env)->GetMethodID(env, cls, name, "()J"); \
+  (*env)->CallLongMethod(env, o, id);                       \
+})
 
 #define getFloatArray(env, cls, o, name) \
 ({ \
@@ -111,8 +116,6 @@ VkInstanceCreateInfo instanceCreateInfo(JNIEnv* env, jobject info) {
   jobjectArray eln_objs = (*env)->CallObjectMethod(env, info, eln_id);
   const char** elns = malloc(elc * sizeof(char*));
   stringEls(env, eln_objs, elns, elc);
-  fprintf(stdout, "\n\nlayers are %s %s\n\n", elns[0], elns[1]);
-  fflush(stdout);
   VkInstanceCreateInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
     .pNext = NULL,
@@ -1262,14 +1265,55 @@ JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_destroyShaderModule
 }
 
 
-JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_beginCommandBuffer
-(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong buffer, jint info) {
+VkCommandBufferInheritanceInfo toCommandBufferInheritanceInfo(JNIEnv* env, jobject o) {
+  MARK("f")
+  jclass cls = (*env)->GetObjectClass(env, o);
+  MARK("fg")
+  jlong rp = getLong(env, cls, o, "renderPass");
+  MARK("fh")
+  VkCommandBufferInheritanceInfo v_info = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+    .framebuffer = VK_NULL_HANDLE,
+    .renderPass = (VkRenderPass) rp
+  };
+  return v_info;
+}
+
+VkCommandBufferBeginInfo toCommandBufferBeginInfo(JNIEnv* env, jobject o) {
+  MARK("a")
+  jclass cls = (*env)->GetObjectClass(env, o);
+  jint flags = getInt(env, cls, o, "flags");
+  MARK("b")
+  jmethodID ii_id = (*env)->GetMethodID(env, cls, "inheritanceInfo", 
+                                         "()Lhephaestus/platform/Vulkan$CommandBufferInheritanceInfo;");
+  MARK("c")
+  jobject ii_o = (*env)->CallObjectMethod(env, o, ii_id);
+  MARK("d")
+  VkCommandBufferInheritanceInfo ii = toCommandBufferInheritanceInfo(env, ii_o);
+  MARK("e")
+  VkCommandBufferInheritanceInfo* ii_ptr = malloc(sizeof(VkCommandBufferInheritanceInfo));
+  if(ii.renderPass == 0) {
+    fprintf(stdout, "null handle");
+    fflush(stdout);
+    ii_ptr = VK_NULL_HANDLE;
+  } else {
+    fprintf(stdout, "non-null handle");
+    fflush(stdout);
+    *ii_ptr = ii;
+  }
+  MARK("f")
   VkCommandBufferBeginInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
     .pNext = NULL,
-    .flags = info,
-    .pInheritanceInfo = NULL
+    .flags = flags,
+    .pInheritanceInfo = ii_ptr
   };
+  return v_info;
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_beginCommandBuffer
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong buffer, jobject info) {
+  VkCommandBufferBeginInfo v_info =  toCommandBufferBeginInfo(env, info);
   RES(vkBeginCommandBuffer((VkCommandBuffer) buffer, &v_info));
 }
 
@@ -2290,4 +2334,10 @@ JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_queuePresentKHR
 (JNIEnv* env, jobject instance __attribute__((unused)), jlong queue, jobject info) {
   VkPresentInfoKHR v_info = toPresentInfoKHR(env, info);
   vkQueuePresentKHR((VkQueue) queue, &v_info);
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdExecuteCommands
+(JNIEnv* env, jobject instance __attribute((unused)), jlong buffer, jint count, jobjectArray buffers) {
+  VkCommandBuffer* bufs = ITER(env, buffers, (uint32_t) count, VkCommandBuffer, toCommandBuffer);
+  vkCmdExecuteCommands((VkCommandBuffer) buffer, (uint32_t) count, bufs);
 }

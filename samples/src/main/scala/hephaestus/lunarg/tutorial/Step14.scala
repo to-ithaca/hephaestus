@@ -55,7 +55,8 @@ object Step14 extends Utils {
     val vertexModule = initShaderModule("vert.spv", device)
     val fragmentModule = initShaderModule("frag.spv", device)
 
-    val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(flags = 0)
+    val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG, 
+    inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE)
     vk.beginCommandBuffer(commandBuffer, commandBufferBeginInfo)
 
     val graphicsQueue = vk.getDeviceQueue(device, qi, 0)

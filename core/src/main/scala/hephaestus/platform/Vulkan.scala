@@ -200,9 +200,15 @@ object Vulkan {
 
   final class Device(val ptr: Long) extends AnyVal
 
+  class CommandPoolCreateFlag(val value: Int) extends AnyVal
+  val COMMAND_POOL_BLANK_FLAG = new CommandPoolCreateFlag(0)
+  val COMMAND_POOL_CREATE_TRANSIENT_BIT = new CommandPoolCreateFlag(0X00000001)
+  val COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = new CommandPoolCreateFlag(0X00000002)
+  val COMMAND_POOL_CREATE_FLAG_BITS_MAX_ENUM = new CommandPoolCreateFlag(0X7FFFFFFF)
+
   final class CommandPoolCreateInfo(
     val pNext: Long,
-    val flags: Int,
+    val flags: CommandPoolCreateFlag,
     val queueFamilyIndex: Int
   )
 
@@ -567,7 +573,18 @@ object Vulkan {
 
   final class Framebuffer(val ptr: Long) extends AnyVal
 
-  final class CommandBufferBeginInfo(val flags: Int) extends AnyVal
+  final class CommandBufferUsageFlag(val value: Int) extends AnyVal {
+    def |(o: CommandBufferUsageFlag): CommandBufferUsageFlag = new CommandBufferUsageFlag(value | o.value)
+  }
+  val COMMAND_BUFFER_USAGE_BLANK_FLAG = new CommandBufferUsageFlag(0)
+  val COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT = new CommandBufferUsageFlag(0x00000001)
+  val COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT = new CommandBufferUsageFlag(0x00000002)
+  val COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT = new CommandBufferUsageFlag(0x00000004)
+  val COMMAND_BUFFER_USAGE_FLAG_BITS_MAX_ENUM = new CommandBufferUsageFlag(0x7FFFFFFF)
+
+  final class CommandBufferInheritanceInfo(val renderPass: RenderPass)
+  val COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE = new CommandBufferInheritanceInfo(new RenderPass(0))
+  final class CommandBufferBeginInfo(val flags: CommandBufferUsageFlag, val inheritanceInfo: CommandBufferInheritanceInfo)
 
   final class Queue(val ptr: Long) extends AnyVal
 
@@ -621,6 +638,7 @@ object Vulkan {
 
   final class SubpassContents(val contents: Int) extends AnyVal
   val SUBPASS_CONTENTS_INLINE = new SubpassContents(0) 
+  val SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS = new SubpassContents(1)
 
   final class DynamicState(val value: Int) extends AnyVal
 
