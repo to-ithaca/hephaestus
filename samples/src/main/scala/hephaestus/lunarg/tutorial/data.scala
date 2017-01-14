@@ -99,4 +99,33 @@ object Cube {
     buf.asFloatBuffer().put(fs, 0, fs.size)
     buf
   }
+
+  def uniformData(width: Int, height: Int, frame: Int): ByteBuffer = {
+    val angle = (frame % 1000).toDouble / 1000.0
+    val radius = math.sqrt(34.0)
+    val eyeX = radius * math.cos(angle * 2.0 * math.Pi)
+    val eyeY = radius * math.sin(angle * 2.0 * math.Pi)
+
+    val aspect = if(width > height) height.toFloat / width.toFloat else 1f
+    val fov = aspect * 45.0f
+    val projection = Matrices.perspective(fov, width.toFloat / height.toFloat, 0.1f, 100.0f)
+    val view = Matrices.lookAt(
+      new Vec3(eyeX.toFloat, eyeY.toFloat, -10f),
+      new Vec3(0f, 0f, 0f),
+      new Vec3(0f, -1f, 0f))
+    val model = Mat4.MAT4_IDENTITY
+    val clip = new Mat4(
+      1.0f, 0.0f, 0.0f, 0.0f,
+      0.0f, -1.0f, 0.0f, 0.0f,
+      0.0f, 0.0f, 0.5f, 0.5f,
+      0.0f, 0.0f, 0.0f, 1.0f).transpose
+    val mvp =  clip.multiply(projection).multiply(view).multiply(model)
+
+    val fbuf = mvp.getBuffer()
+    val fs = new Array[Float](fbuf.capacity())
+    fbuf.get(fs)
+    val buf = ByteBuffer.allocateDirect(fs.size * 4).order(ByteOrder.nativeOrder())
+    buf.asFloatBuffer().put(fs, 0, fs.size)
+    buf
+  }
 }
