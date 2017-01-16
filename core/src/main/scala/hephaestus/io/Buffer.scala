@@ -56,12 +56,14 @@ object Buffer {
   def apply[A](a: A*)(implicit bytes: ops.buffer.Bytes[A], put: ops.buffer.Put[A]): Buffer[A] = {
     val b = empty[A](a.size)
     a.foreach(b.put)
+    b.rewind()
     b
   }
 
   def direct[A](a: A*)(implicit bytes: ops.buffer.Bytes[A], put: ops.buffer.Put[A]): Buffer[A] = {
     val b = emptyDirect[A](a.size)
     a.foreach(b.put)
+    b.rewind()
     b
   }
 
