@@ -67,8 +67,7 @@ object Step13 extends Utils {
     val vertexBufferCreateInfo = new Vulkan.BufferCreateInfo(
       usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT,
       size = new Vulkan.DeviceSize(vertexData.capacity),
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty,
+      queueFamilyIndices = Array.empty,
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
       flags = 0)
     val vertexBuffer = vk.createBuffer(device, vertexBufferCreateInfo)
@@ -104,8 +103,7 @@ object Step13 extends Utils {
       renderArea = new Vulkan.Rect2D(
         offset = new Vulkan.Offset2D(x = 0, y = 0),
         extent = new Vulkan.Extent2D(width = width, height = height)),
-      clearValueCount = 2,
-      pClearValues = Array(clearValues0, clearValues1)
+      clearValues = Array(clearValues0, clearValues1)
     )
 
     vk.cmdBeginRenderPass(commandBuffer, renderPassBeginInfo, Vulkan.SUBPASS_CONTENTS_INLINE)

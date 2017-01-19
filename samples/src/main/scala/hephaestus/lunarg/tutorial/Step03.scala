@@ -18,21 +18,13 @@ object Step03 extends Utils {
     }.map(_._2).get
 
     val dqinfo = new Vulkan.DeviceQueueCreateInfo(
-      pNext = 0,
       flags = 0,
       queueFamilyIndex = qi,
-      queueCount = 1,
-      pQueuePriorities = Array(0f)
+      queuePriorities = Array(0f)
     )
     val dinfo = new Vulkan.DeviceCreateInfo(
-      pNext = 0,
-      flags = 0,
-      queueCreateInfoCount = 1,
-      pQueueCreateInfos = Array(dqinfo),
-      enabledLayerCount = 0,
-      ppEnabledLayerNames = Array.empty[String],
-      enabledExtensionCount = 0,
-      ppEnabledExtensionNames = Array.empty[String])
+      queueCreateInfos = Array(dqinfo),
+      enabledExtensionNames = Array.empty[String])
     val device = vk.createDevice(physicalDevice, dinfo)
 
     vk.destroyDevice(device)

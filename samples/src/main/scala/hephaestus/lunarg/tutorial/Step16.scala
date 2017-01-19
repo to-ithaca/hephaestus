@@ -23,12 +23,10 @@ object Step16 extends Utils {
     val device = initDeviceExtensions(physicalDevice, qi)
 
     val commandPool = vk.createCommandPool(device, new Vulkan.CommandPoolCreateInfo(
-      pNext = 0,
       flags = Vulkan.COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
       queueFamilyIndex = qi
     ))
     val commandBuffer = vk.allocateCommandBuffers(device, new Vulkan.CommandBufferAllocateInfo(
-      pNext = 0,
       commandPool = commandPool,
       level = Vulkan.COMMAND_BUFFER_LEVEL_SECONDARY,
       commandBufferCount = 1
@@ -124,8 +122,7 @@ object Step16 extends Utils {
       renderArea = new Vulkan.Rect2D(
         offset = new Vulkan.Offset2D(x = 0, y = 0),
         extent = new Vulkan.Extent2D(width = width, height = height)),
-      clearValueCount = clearValues.size,
-      pClearValues = clearValues
+      clearValues = clearValues
     )
     vk.cmdBeginRenderPass(primaryCommandBuffer, renderPassBeginInfo, Vulkan.SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS)
     vk.cmdExecuteCommands(primaryCommandBuffer, 1, Array(commandBuffer))
@@ -138,11 +135,9 @@ object Step16 extends Utils {
     println("reset fence")
 
     val presentInfo = new Vulkan.PresentInfoKHR(
-      swapchainCount = 1,
-      pSwapchains = Array(swapchain),
-      pImageIndices = currentBuffer,
-      pWaitSemaphores = Array.empty,
-      waitSemaphoreCount = 0)
+      swapchains = Array(swapchain),
+      imageIndices = currentBuffer,
+      waitSemaphores = Array.empty)
 
     vk.queuePresentKHR(graphicsQueue, presentInfo)
     //}

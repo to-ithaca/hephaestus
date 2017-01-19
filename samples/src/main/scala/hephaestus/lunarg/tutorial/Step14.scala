@@ -10,7 +10,7 @@ object Step14 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 
-    val instance = initInstanceExtensionsDebug()
+    val instance = initInstanceExtensions()
 
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
     val width = 500
@@ -89,26 +89,23 @@ object Step14 extends Utils {
       flags = 0,
       stage = Vulkan.SHADER_STAGE_VERTEX_BIT,
       module = vertexModule,
-      pName = "main"
+      name = "main"
     )
     val fragmentShaderStage = new Vulkan.PipelineShaderStageCreateInfo(
       flags = 0,
       stage = Vulkan.SHADER_STAGE_FRAGMENT_BIT,
       module = fragmentModule,
-      pName = "main"
+      name = "main"
     )
 
     val vertexInputStateCreateInfo = new Vulkan.PipelineVertexInputStateCreateInfo(
       flags = 0,
-      vertexBindingDescriptionCount = 1,
-      pVertexBindingDescriptions = Array(vertexBinding),
-      vertexAttributeDescriptionCount = 2,
-      pVertexAttributeDescriptions = Array(vertexAttrib0, vertexAttrib1))
+      vertexBindingDescriptions = Array(vertexBinding),
+      vertexAttributeDescriptions = Array(vertexAttrib0, vertexAttrib1))
 
     val dynamicState = new Vulkan.PipelineDynamicStateCreateInfo(
       flags = 0,
-      dynamicStateCount = 2,
-      pDynamicStates = Array(
+      dynamicStates = Array(
         Vulkan.DYNAMIC_STATE_VIEWPORT,
         Vulkan.DYNAMIC_STATE_SCISSOR))
 
@@ -143,8 +140,7 @@ object Step14 extends Utils {
     )
     val colorBlendStateCreateInfo = new Vulkan.PipelineColorBlendStateCreateInfo(
       flags = 0,
-      attachmentCount = 1,
-      pAttachments = Array(colorBlendAttachmentState),
+      attachments = Array(colorBlendAttachmentState),
       logicOpEnable = false,
       logicOp = Vulkan.LOGIC_OP_NO_OP,
       blendConstants = Array(1f, 1f, 1f, 1f)
@@ -153,9 +149,9 @@ object Step14 extends Utils {
     val viewportStateCreateInfo = new Vulkan.PipelineViewportStateCreateInfo(
       flags = 0,
       viewportCount = 1,
-      pViewports = Array.empty,
+      viewports = Array.empty,
       scissorCount = 1,
-      pScissors = Array.empty)
+      scissors = Array.empty)
 
 
     val depthStencilOpState = new Vulkan.StencilOpState(
@@ -181,7 +177,7 @@ object Step14 extends Utils {
 
     val multisampleStateCreateInfo = new Vulkan.PipelineMultisampleStateCreateInfo(
       flags = 0,
-      pSampleMask = 0,
+      sampleMask = 0,
       rasterizationSamples = Vulkan.SAMPLE_COUNT_1_BIT,
       sampleShadingEnable = false,
       alphaToCoverageEnable = false,
@@ -193,16 +189,15 @@ object Step14 extends Utils {
       basePipelineHandle = new Vulkan.Pipeline(0),
       basePipelineIndex = 0,
       flags = 0,
-      pVertexInputState = vertexInputStateCreateInfo,
-      pInputAssemblyState = inputAssemblyStateCreateInfo,
-      pRasterizationState = rasterizationStateCreateInfo,
-      pColorBlendState = colorBlendStateCreateInfo,
-      pMultisampleState = multisampleStateCreateInfo,
-      pDynamicState = dynamicState,
-      pViewportState = viewportStateCreateInfo,
-      pDepthStencilState = depthStencilStateCreateInfo,
-      pStages = Array(vertexShaderStage, fragmentShaderStage),
-      stageCount = 2,
+      vertexInputState = vertexInputStateCreateInfo,
+      inputAssemblyState = inputAssemblyStateCreateInfo,
+      rasterizationState = rasterizationStateCreateInfo,
+      colorBlendState = colorBlendStateCreateInfo,
+      multisampleState = multisampleStateCreateInfo,
+      dynamicState = dynamicState,
+      viewportState = viewportStateCreateInfo,
+      depthStencilState = depthStencilStateCreateInfo,
+      stages = Array(vertexShaderStage, fragmentShaderStage),
       renderPass = renderPass,
       subpass = 0
     )

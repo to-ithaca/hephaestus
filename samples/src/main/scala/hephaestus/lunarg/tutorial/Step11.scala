@@ -57,20 +57,20 @@ object Step11 extends Utils {
     val vertexModuleCreateInfo = new Vulkan.ShaderModuleCreateInfo(
       flags = 0,
       codeSize = vertexSpv.capacity,
-      pCode = vertexSpv
+      code = vertexSpv
     )
     val vertexModule = vk.createShaderModule(device, vertexModuleCreateInfo)
     val vertexShaderStage = new Vulkan.PipelineShaderStageCreateInfo(
       flags = 0,
       stage = Vulkan.SHADER_STAGE_VERTEX_BIT,
       module = vertexModule,
-      pName = "main"
+      name = "main"
     )
 
     val fragmentCreateInfo = new Vulkan.ShaderModuleCreateInfo(
       flags = 0,
       codeSize = fragSpv.capacity,
-      pCode = fragSpv
+      code = fragSpv
     )
 
     val fragmentModule = vk.createShaderModule(device, fragmentCreateInfo)
@@ -78,7 +78,7 @@ object Step11 extends Utils {
       flags = 0,
       stage = Vulkan.SHADER_STAGE_FRAGMENT_BIT,
       module = fragmentModule,
-      pName = "main"
+      name = "main"
     )
 
     vk.destroyShaderModule(device, vertexModule)

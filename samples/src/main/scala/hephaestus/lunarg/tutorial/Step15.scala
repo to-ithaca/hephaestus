@@ -103,11 +103,9 @@ object Step15 extends Utils {
 
     //code start
     val presentInfo = new Vulkan.PresentInfoKHR(
-      swapchainCount = 1,
-      pSwapchains = Array(swapchain),
-      pImageIndices = currentBuffer,
-      pWaitSemaphores = Array.empty,
-      waitSemaphoreCount = 0)
+      swapchains = Array(swapchain),
+      imageIndices = currentBuffer,
+      waitSemaphores = Array.empty)
 
     vk.queuePresentKHR(graphicsQueue, presentInfo)
     Thread.sleep(1000)
