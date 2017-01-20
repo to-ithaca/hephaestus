@@ -26,4 +26,10 @@ class BufferSpec extends FlatSpec {
     val b = Buffer(1, 2)
     assert(b.size == 2)
   }
+
+  it should "be direct and native ordered" in {
+    val b = Buffer.direct(1, 2)
+    assert(b.direct == true)
+    assert(b.order == java.nio.ByteOrder.nativeOrder())
+  }
 }
