@@ -5,6 +5,7 @@ package tutorial
 import hephaestus.platform._
 import java.nio._
 
+/** Draws a coloured cube */
 object Step15 extends Utils {
 
   def main(args: Array[String]): Unit = {

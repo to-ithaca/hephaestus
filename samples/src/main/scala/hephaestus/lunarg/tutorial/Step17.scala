@@ -5,6 +5,7 @@ package tutorial
 import hephaestus.platform._
 import java.nio._
 
+/** Draws a coloured cube for several frames, updates uniforms per frame */
 object Step17 extends Utils {
 
   def main(args: Array[String]): Unit = {
@@ -46,9 +47,21 @@ object Step17 extends Utils {
     val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
-    val uniformData = Cube.uniformData(width, height)
+    //have the uniform data change per frame
+    val uniformData = Cube.uniformData(width, height, 0)
     val buffer = initBuffer(device, uniformData.capacity)
-    val bufferMemory = initBufferMemory(device, memoryProperties, buffer, uniformData)
+
+    //vk.loadMemory(dataPtr, data)
+    val bufferMemoryRequirements = vk.getBufferMemoryRequirements(device, buffer)
+    val bufferMemoryTypeIndex = memoryTypeIndex(memoryProperties, bufferMemoryRequirements,
+      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    val bufferMemoryAllocationInfo = new Vulkan.MemoryAllocateInfo(
+      allocationSize = bufferMemoryRequirements.size,
+      memoryTypeIndex = bufferMemoryTypeIndex)
+    val bufferMemory = vk.allocateMemory(device, bufferMemoryAllocationInfo)
+    val uniformDataPtr = vk.mapMemory(device, bufferMemory, new Vulkan.DeviceSize(0), bufferMemoryRequirements.size, 0) 
+    //vk.unmapMemory(device, bufferMemory)
+    vk.bindBufferMemory(device, buffer, bufferMemory, new Vulkan.DeviceSize(0))
 
     val descriptorSetLayout = initDescriptorSetLayout(device)
     val pipelineLayout = initPipelineLayout(device, descriptorSetLayout)
@@ -105,7 +118,12 @@ object Step17 extends Utils {
     val renderSemaphore = initSemaphore(device)
     val fence = initFence(device)
 
-    (0 until 10).foreach { _ =>
+    (0 until 10000).foreach { i =>
+
+      //since memory is coherent, we just need to do a memcopy
+      val uniformDataPerFrame = Cube.uniformData(width, height, i)
+      vk.loadMemory(uniformDataPtr, uniformDataPerFrame)
+
       val currentBuffer = vk.acquireNextImageKHR(device, swapchain, java.lang.Long.MAX_VALUE, acquireSemaphore, new Vulkan.Fence(0))
       vk.beginCommandBuffer(primaryCommandBuffer, new Vulkan.CommandBufferBeginInfo(flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
         inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE))

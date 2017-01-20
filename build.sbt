@@ -29,9 +29,12 @@ lazy val commonResolvers = Seq(
 )
 
 lazy val commonSettings = Seq(
-    resolvers := commonResolvers,
-    scalacOptions ++= commonScalacOptions,
-    libraryDependencies += "com.hackoeur" % "jglm" % "1.0.0"
+  resolvers := commonResolvers,
+  scalacOptions ++= commonScalacOptions,
+  libraryDependencies ++= Seq(
+    "com.hackoeur" % "jglm" % "1.0.0",
+    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+  )
 ) ++ coverageSettings ++ buildSettings
 
 
