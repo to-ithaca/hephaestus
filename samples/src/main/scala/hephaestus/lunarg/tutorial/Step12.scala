@@ -63,8 +63,7 @@ object Step12 extends Utils {
       val framebufferCreateInfo = new Vulkan.FramebufferCreateInfo(
         flags = 0,
         renderPass = renderPass,
-        attachmentCount = 2,
-        pAttachments = Array(v, depthImageView),
+        attachments = Array(v, depthImageView),
         width = width,
         height = height,
         layers = 1
@@ -78,13 +77,10 @@ object Step12 extends Utils {
     val fenceCreateInfo = new Vulkan.FenceCreateInfo(flags = 0)
     val fence = vk.createFence(device, fenceCreateInfo)
     val submitInfo = new Vulkan.SubmitInfo(
-      waitSemaphoreCount = 0,
-      pWaitSemaphores = Array.empty[Vulkan.Semaphore],
-      pWaitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-      commandBufferCount = 1,
-      pCommandBuffers = Array(commandBuffer),
-      signalSemaphoreCount = 0,
-      pSignalSemaphores = Array.empty[Vulkan.Semaphore])
+      waitSemaphores = Array.empty[Vulkan.Semaphore],
+      waitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+      commandBuffers = Array(commandBuffer),
+      signalSemaphores = Array.empty[Vulkan.Semaphore])
     vk.queueSubmit(graphicsQueue, 1, Array(submitInfo), fence)
     vk.waitForFences(device, 1, Array(fence), true, 100000000)
     vk.destroyFence(device, fence)

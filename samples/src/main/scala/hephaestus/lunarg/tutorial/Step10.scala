@@ -80,26 +80,21 @@ object Step10 extends Utils {
     val subpass = new Vulkan.SubpassDescription(
       pipelineBindPoint = Vulkan.PIPELINE_BIND_POINT_GRAPHICS,
       flags = 0,
-      inputAttachmentCount = 0,
-      pInputAttachments = Array.empty[Vulkan.AttachmentReference],
-      colorAttachmentCount = 1,
-      pColorAttachments = Array(colorReference),
-      pResolveAttachments = Array.empty[Vulkan.AttachmentReference],
-      pDepthStencilAttachment = Array(depthReference),
-      preserveAttachmentCount = 0,
-      pPreserveAttachments = Array.empty[Int]
+      inputAttachments = Array.empty[Vulkan.AttachmentReference],
+      colorAttachments = Array(colorReference),
+      resolveAttachments = Array.empty[Vulkan.AttachmentReference],
+      depthStencilAttachment = Array(depthReference),
+      preserveAttachments = Array.empty[Int]
     )
 
     val renderPassCreateInfo = new Vulkan.RenderPassCreateInfo(
       flags = 0,
-      attachmentCount = 2,
-      pAttachments = Array(colorAttachment, depthAttachment),
-      subpassCount = 1,
-      pSubpasses = Array(subpass),
-      dependencyCount = 0,
-      pDependencies = Array.empty
+      attachments = Array(colorAttachment, depthAttachment),
+      subpasses = Array(subpass),
+      dependencies = Array.empty
     )
 
+    println("about to create rnder pass")
     val renderPass = vk.createRenderPass(device, renderPassCreateInfo)
 
     vk.destroyRenderPass(device, renderPass)

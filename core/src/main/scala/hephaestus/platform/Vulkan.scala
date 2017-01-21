@@ -38,6 +38,7 @@ class Vulkan {
   @native def allocateMemory(device: Device, info: MemoryAllocateInfo): DeviceMemory
   @native def bindImageMemory(device: Device, image: Image, memory: DeviceMemory, offset: DeviceSize): Unit
   @native def freeMemory(device: Device, memory: DeviceMemory): Unit
+  @native def getImageSubresourceLayout(device: Device, image: Image, subresource: ImageSubresource): SubresourceLayout
 
   @native def createBuffer(device: Device, createInfo: BufferCreateInfo): Buffer
   @native def getBufferMemoryRequirements(device: Device, buffer: Buffer): MemoryRequirements
@@ -102,42 +103,43 @@ class Vulkan {
   @native def cmdSetScissor(buffer: CommandBuffer, firstScissor: Int, scissorCount: Int, scissor: Array[Rect2D]): Unit
   @native def cmdDraw(buffer: CommandBuffer, vertexCount: Int, instanceCount: Int, firstVertex: Int, firstInstance: Int): Unit
   @native def queuePresentKHR(queue: Queue, info: PresentInfoKHR): Unit
+
+  @native def cmdPipelineBarrier(buffer: CommandBuffer, srcStageMask: PipelineStageFlag, dstStageMask: PipelineStageFlag, dependencyFlags: Int, memoryBarriers: Array[MemoryBarrier], bufferMemoryBarriers: Array[BufferMemoryBarrier], imageMemoryBarriers: Array[ImageMemoryBarrier])
+  @native def createSampler(device: Device, info: SamplerCreateInfo): Sampler
 }
 
 object Vulkan {
   val API_VERSION_1_0: Int = 1 << 22
 
   val QUEUE_GRAPHICS_BIT: Int = 0x00000001
+  val QUEUE_FAMILY_IGNORED: Long = 4294967295L
 
   final class StructureType(val sType: Int) extends AnyVal
   val APPLICATION_INFO = new StructureType(0)
   val INSTANCE_CREATE_INFO = new StructureType(1)
 
   final class ApplicationInfo(
-    val pNext: Long,
-    val pApplicationName: String,
+    val applicationName: String,
     val applicationVersion: Int,
-    val pEngineName: String,
+    val engineName: String,
     val engineVersion: Int,
-    val apiVersion: Int
-  ) {
-    val sType: StructureType = APPLICATION_INFO
-  }
+    val apiVersion: Int)
 
   final class InstanceCreateInfo(
-    val pNext: Long,
-    val pApplicationInfo: ApplicationInfo,
-    val enabledLayerCount: Int,
-    val ppEnabledLayerNames: Array[String],
-    val enabledExtensionCount: Int,
-    val ppEnabledExtensionNames: Array[String]) {
-    val sType: StructureType = INSTANCE_CREATE_INFO
-    val flags: Long = 0
-  }
+    val applicationInfo: ApplicationInfo,
+    val enabledLayerNames: Array[String],
+    val enabledExtensionNames: Array[String])
 
   final class Instance(val ptr: Long) extends AnyVal
-  
   final class PhysicalDevice(val ptr: Long) extends AnyVal
+  final class Device(val ptr: Long) extends AnyVal
+  final class CommandPool(val ptr: Long) extends AnyVal
+  final class CommandBuffer(val ptr: Long) extends AnyVal
+  final class Surface(val ptr: Long) extends AnyVal
+  final class Swapchain(val ptr: Long) extends AnyVal
+  final class Image(val ptr: Long) extends AnyVal
+  final class DeviceMemory(val ptr: Long) extends AnyVal
+  final class ImageView(val ptr: Long) extends AnyVal
 
   final class MemoryType(
     val propertyFlags: Int,
@@ -148,18 +150,14 @@ object Vulkan {
     val flags: Int)
   
   final class PhysicalDeviceMemoryProperties(
-    val memoryTypeCount: Int,
     val memoryTypes: Array[MemoryType],
-    val memoryHeapCount: Int,
-    val memoryHeaps: Array[MemoryHeap]
-  )
+    val memoryHeaps: Array[MemoryHeap])
 
   final class QueueFamilyProperties(
     val queueFlags: Int,
     val queueCount: Int,
     val timestampValidBits: Int,
-    val minImageTransferGranularity: Extent3D
-  )
+    val minImageTransferGranularity: Extent3D)
 
   final class Extent3D(
     val width: Int,
@@ -170,7 +168,6 @@ object Vulkan {
     val width: Int,
     val height: Int)
 
-
   final class Offset2D(
     val x: Int,
     val y: Int)
@@ -180,25 +177,13 @@ object Vulkan {
     val extent: Extent2D)
 
   final class DeviceQueueCreateInfo(
-    val pNext: Long,
     val flags: Int,
     val queueFamilyIndex: Int,
-    val queueCount: Int,
-    val pQueuePriorities: Array[Float]
-  )
+    val queuePriorities: Array[Float])
 
   final class DeviceCreateInfo(
-    val pNext: Long,
-    val flags: Int,
-    val queueCreateInfoCount: Int,
-    val pQueueCreateInfos: Array[DeviceQueueCreateInfo],
-    val enabledLayerCount: Int,
-    val ppEnabledLayerNames: Array[String],
-    val enabledExtensionCount: Int,
-    val ppEnabledExtensionNames: Array[String]
-  )
-
-  final class Device(val ptr: Long) extends AnyVal
+    val queueCreateInfos: Array[DeviceQueueCreateInfo],
+    val enabledExtensionNames: Array[String])
 
   class CommandPoolCreateFlag(val value: Int) extends AnyVal
   val COMMAND_POOL_BLANK_FLAG = new CommandPoolCreateFlag(0)
@@ -207,36 +192,35 @@ object Vulkan {
   val COMMAND_POOL_CREATE_FLAG_BITS_MAX_ENUM = new CommandPoolCreateFlag(0X7FFFFFFF)
 
   final class CommandPoolCreateInfo(
-    val pNext: Long,
     val flags: CommandPoolCreateFlag,
-    val queueFamilyIndex: Int
-  )
+    val queueFamilyIndex: Int)
 
-  final class CommandPool(val ptr: Long) extends AnyVal
 
   final class CommandBufferLevel(val level: Long) extends AnyVal
   val COMMAND_BUFFER_LEVEL_PRIMARY = new CommandBufferLevel(0)
   val COMMAND_BUFFER_LEVEL_SECONDARY = new CommandBufferLevel(1)
 
   final class CommandBufferAllocateInfo(
-    val pNext: Long,
     val commandPool: CommandPool,
     val level: CommandBufferLevel,
     val commandBufferCount: Int
   )
 
-  final class CommandBuffer(val ptr: Long) extends AnyVal
-
-  final class Surface(val ptr: Long) extends AnyVal
   val SWAPCHAIN_EXTENSION_NAME = "VK_KHR_swapchain"
 
   final class Format(val format: Int) extends AnyVal
   val FORMAT_UNDEFINED = new Format(0)
+  val FORMAT_R8G8B8A8_UNORM = new Format(37)
   val FORMAT_B8G8R8A8_UNORM = new Format(44)
   val FORMAT_D16_UNORM = new Format(124)
   val FORMAT_R32G32B32A32_SFLOAT = new Format(109)
+  val FORMAT_R32G32_SFLOAT = new Format(103)
 
-  val FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000200
+  final class FormatFeatureFlagBit(val value: Int) extends AnyVal {
+    def &(o: Int): Boolean = (value & o) > 0
+  }
+  val FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT = new FormatFeatureFlagBit(0x00000200)
+  val FORMAT_FEATURE_SAMPLED_IMAGE_BIT = new FormatFeatureFlagBit(0x00000001)
 
   final class ColorSpace(val colorSpace: Int) extends AnyVal
   val COLORSPACE_SRGB_NONLINEAR = new ColorSpace(0)
@@ -268,10 +252,9 @@ object Vulkan {
     val imageColorSpace: ColorSpace,
     val imageExtent: Extent2D,
     val imageArrayLayers: Int,
-    val imageUsage: Int,
+    val imageUsage: ImageUsageFlagBit,
     val imageSharingMode: SharingMode,
-    val queueFamilyIndexCount: Int,
-    val pQueueFamilyIndices: Array[Int],
+    val queueFamilyIndices: Array[Int],
     val preTransform: Int,
     val compositeAlpha: Long,
     val presentMode: PresentMode,
@@ -279,11 +262,12 @@ object Vulkan {
 
   val COMPOSITE_ALPHA_OPAQUE_BIT = 1
   val NULL_HANDLE = 0
-  val IMAGE_USAGE_COLOR_ATTACHMENT_BIT = 0x00000010
-  val IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000020
 
-  final class Swapchain(val ptr: Long) extends AnyVal
-  final class Image(val ptr: Long) extends AnyVal
+  final class ImageUsageFlagBit(val value: Int) extends AnyVal
+  val IMAGE_USAGE_COLOR_ATTACHMENT_BIT = new ImageUsageFlagBit(0x00000010)
+  val IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = new ImageUsageFlagBit(0x00000020)
+  val IMAGE_USAGE_SAMPLED_BIT = new ImageUsageFlagBit(0x00000004)
+
 
   final class ImageViewType(val tpe: Int) extends AnyVal
   val IMAGE_VIEW_TYPE_2D = new ImageViewType(1)
@@ -299,14 +283,17 @@ object Vulkan {
     val g: ComponentSwizzle,
     val b: ComponentSwizzle,
     val a: ComponentSwizzle)
+
   final class ImageSubresourceRange(
-    val aspectMask: Int,
+    val aspectMask: ImageAspectFlag,
     val baseMipLevel: Int,
     val levelCount: Int,
     val baseArrayLayer: Int,
     val layerCount: Int)
-  val IMAGE_ASPECT_COLOR_BIT = 0x00000001
-  val IMAGE_ASPECT_DEPTH_BIT = 0x00000002
+
+  final class ImageAspectFlag(val value: Int) extends AnyVal
+  val IMAGE_ASPECT_COLOR_BIT = new ImageAspectFlag(0x00000001)
+  val IMAGE_ASPECT_DEPTH_BIT = new ImageAspectFlag(0x00000002)
 
   final class ImageViewCreateInfo(
     val flags: Int,
@@ -316,7 +303,19 @@ object Vulkan {
     val components: ComponentMapping,
     val subresourceRange: ImageSubresourceRange)
 
-  final class ImageView(val ptr: Long) extends AnyVal
+  final class ImageSubresource(
+    val aspectMask: ImageAspectFlag,
+    val mipLevel: Int,
+    val arrayLayer: Int
+  )
+
+
+final class SubresourceLayout(
+  val offset: DeviceSize,
+  val size: DeviceSize,
+  val rowPitch: DeviceSize,
+  val arrayPitch: DeviceSize,
+  val depthPitch: DeviceSize)
 
   final class ImageTiling(val tiling: Int) extends AnyVal
   val IMAGE_TILING_OPTIONAL = new ImageTiling(0)
@@ -335,9 +334,14 @@ object Vulkan {
 
   final class ImageLayout(val layout: Int) extends AnyVal
   val IMAGE_LAYOUT_UNDEFINED = new ImageLayout(0)
+  val IMAGE_LAYOUT_GENERAL = new ImageLayout(1)
   val IMAGE_LAYOUT_PRESENT_SRC_KHR = new ImageLayout(1000001002)
   val IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL = new ImageLayout(2)
   val IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL = new ImageLayout(3)
+  val IMAGE_LAYOUT_PREINITIALIZED = new ImageLayout(8)
+  val IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL = new ImageLayout(5)
+  val IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL = new ImageLayout(6)
+  val IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL = new ImageLayout(7)
 
   final class ImageCreateInfo(
     val flags: Int,
@@ -348,10 +352,9 @@ object Vulkan {
     val arrayLayers: Int,
     val samples: Int,
     val tiling: ImageTiling,
-    val usage: Int,
+    val usage: ImageUsageFlagBit,
     val sharingMode: SharingMode,
-    val queueFamilyIndexCount: Int,
-    val pQueueFamilyIndices: Array[Int],
+    val queueFamilyIndices: Array[Int],
     val initialLayout: ImageLayout)
 
   final class DeviceSize(val size: Long) extends AnyVal
@@ -365,26 +368,23 @@ object Vulkan {
     val alignment: DeviceSize,
     val memoryTypeBits: Int)
 
-  final class DeviceMemory(val ptr: Long) extends AnyVal
   val SAMPLE_COUNT_1_BIT = 0x00000001
 
-  def memoryTypeIndex(ps: PhysicalDeviceMemoryProperties, bits: Int): Int = 
-    ps.memoryTypes.zipWithIndex.foldLeft((Option.empty[Int], bits)) { (t0, t1) =>
-      (t0, t1) match {
-        case ((None, bits), (tpe, i)) => if((bits & 1) == 1) (Some(i), bits) else (None, bits >> 1)
-        case (prev, _) => prev
-      }
-    }._1.get
+  // def memoryTypeIndex(ps: PhysicalDeviceMemoryProperties, bits: Int): Int = 
+  //   ps.memoryTypes.zipWithIndex.foldLeft((Option.empty[Int], bits)) { (t0, t1) =>
+  //     (t0, t1) match {
+  //       case ((None, bits), (tpe, i)) => if((bits & 1) == 1) (Some(i), bits) else (None, bits >> 1)
+  //       case (prev, _) => prev
+  //     }
+  //   }._1.get
 
   final class BufferCreateInfo(
     val flags: Int,
     val size: DeviceSize,
     val usage: Int,
     val sharingMode: SharingMode,
-    val queueFamilyIndexCount: Int,
-    val pQueueFamilyIndices: Array[Int])
+    val queueFamilyIndices: Array[Int])
 
-  final class Buffer(val ptr: Long) extends AnyVal
 
   val BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x00000010
   val BUFFER_USAGE_VERTEX_BUFFER_BIT = 0x00000080
@@ -393,35 +393,31 @@ object Vulkan {
 
   final class DescriptorType(val tpe: Int) extends AnyVal
   val DESCRIPTOR_TYPE_UNIFORM_BUFFER: DescriptorType = new DescriptorType(6)
+  val DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER = new DescriptorType(1)
 
   val SHADER_STAGE_VERTEX_BIT: Int = 0x00000001
   val SHADER_STAGE_FRAGMENT_BIT = 0x00000010
-  final class Sampler(val ptr: Long) extends AnyVal
 
   final class DescriptorSetLayoutBinding(
     val binding: Int,
     val descriptorType: DescriptorType,
     val descriptorCount: Int,
     val stageFlags: Int,
-    val pImmutableSamplers: Array[Sampler]
-  )
+    val immutableSamplers: Array[Sampler])
 
   final class DescriptorSetLayoutCreateInfo(
     val flags: Int,
-    val bindingCount: Int,
-    val pBindings: Array[DescriptorSetLayoutBinding]
-  )
+    val bindings: Array[DescriptorSetLayoutBinding])
 
-  final class DescriptorSetLayout(val ptr: Long) extends AnyVal
   
   final class PipelineLayoutCreateInfo(
     val flags: Int,
-    val setLayoutCount: Int,
-    val pSetLayouts: Array[DescriptorSetLayout],
-    val pushConstantRangeCount: Int,
-    val pPushConstantRanges: Array[PushConstantRange]
-  )
+    val setLayouts: Array[DescriptorSetLayout],
+    val pushConstantRanges: Array[PushConstantRange])
 
+  final class Buffer(val ptr: Long) extends AnyVal
+  final class Sampler(val ptr: Long) extends AnyVal
+  final class DescriptorSetLayout(val ptr: Long) extends AnyVal
   final class PipelineLayout(val ptr: Long) extends AnyVal
 
   final class PushConstantRange(
@@ -436,40 +432,36 @@ object Vulkan {
   final class DescriptorPoolCreateInfo(
     val flags: Int,
     val maxSets: Int,
-    val poolSizeCount: Int,
-    val pPoolSizes: Array[DescriptorPoolSize])
+    val poolSizes: Array[DescriptorPoolSize])
 
   final class DescriptorPool(val ptr: Long) extends AnyVal
 
   final class DescriptorSetAllocateInfo(
     val descriptorPool: DescriptorPool,
-    val descriptorSetCount: Int,
-    val pSetLayouts: Array[DescriptorSetLayout])
+    val setLayouts: Array[DescriptorSetLayout])
 
   final class DescriptorSet(val ptr: Long) extends AnyVal
 
   final class DescriptorImageInfo(
     val sampler: Sampler,
     val imageView: ImageView,
-    val imageLayout: ImageLayout
-  )
+    val imageLayout: ImageLayout)
 
   final class DescriptorBufferInfo(
     val buffer: Buffer,
     val offset: DeviceSize,
-    val range: DeviceSize
-  )
+    val range: DeviceSize)
 
+  //TODO how big are these?
   final class WriteDescriptorSet(
     val dstSet: DescriptorSet,
     val dstBinding: Int,
     val dstArrayElement: Int,
     val descriptorCount: Int,
     val descriptorType: DescriptorType,
-    val pImageInfo: Array[DescriptorImageInfo],
-    val pBufferInfo: Array[DescriptorBufferInfo],
-    val pTexelBufferView: Array[BufferView]
-  )
+    val imageInfo: Array[DescriptorImageInfo],
+    val bufferInfo: Array[DescriptorBufferInfo],
+    val texelBufferView: Array[BufferView])
 
   final class CopyDescriptorSet(
     val srcSet: DescriptorSet,
@@ -482,11 +474,11 @@ object Vulkan {
   )
 
   final class BufferView(val prt: Long) extends AnyVal
-
   final class Semaphore(val ptr: Long) extends AnyVal
+  final class Fence(val ptr: Long) extends AnyVal 
+
   final class SemaphoreCreateInfo(val flags: Int) extends AnyVal
 
-  final class Fence(val ptr: Long) extends AnyVal 
 
   final class AttachmentLoadOp(val op: Int) extends AnyVal
   val ATTACHMENT_LOAD_OP_CLEAR = new AttachmentLoadOp(1)
@@ -517,14 +509,11 @@ object Vulkan {
   final class SubpassDescription(
     val flags: Int,
     val pipelineBindPoint: PipelineBindPoint,
-    val inputAttachmentCount: Int,
-    val pInputAttachments: Array[AttachmentReference],
-    val colorAttachmentCount: Int,
-    val pColorAttachments: Array[AttachmentReference],
-    val pResolveAttachments: Array[AttachmentReference],
-    val pDepthStencilAttachment: Array[AttachmentReference],
-    val preserveAttachmentCount: Int,
-    val pPreserveAttachments: Array[Int])
+    val inputAttachments: Array[AttachmentReference],
+    val colorAttachments: Array[AttachmentReference],
+    val resolveAttachments: Array[AttachmentReference],
+    val depthStencilAttachment: Array[AttachmentReference],
+    val preserveAttachments: Array[Int])
 
   final class SubpassDependency(
     val srcSubpass: Int,
@@ -538,20 +527,16 @@ object Vulkan {
 
   final class RenderPassCreateInfo(
     val flags: Int,
-    val attachmentCount: Int,
-    val pAttachments: Array[AttachmentDescription],
-    val subpassCount: Int,
-    val pSubpasses: Array[SubpassDescription],
-    val dependencyCount: Int,
-    val pDependencies: Array[SubpassDependency])
+    val attachments: Array[AttachmentDescription],
+    val subpasses: Array[SubpassDescription],
+    val dependencies: Array[SubpassDependency])
 
   final class RenderPass(val ptr: Long) extends AnyVal
 
   final class ShaderModuleCreateInfo(
     val flags: Int,
     val codeSize: Int,
-    val pCode: ByteBuffer
-  )
+    val code: ByteBuffer)
 
   final class ShaderModule(val ptr: Long) extends AnyVal
 
@@ -559,17 +544,59 @@ object Vulkan {
     val flags: Int,
     val stage: Int,
     val module: ShaderModule,
-    val pName: String)
+    val name: String)
 
   final class FramebufferCreateInfo(
     val flags: Int,
     val renderPass: RenderPass,
-    val attachmentCount: Int,
-    val pAttachments: Array[ImageView],
+    val attachments: Array[ImageView],
     val width: Int,
     val height: Int,
-    val layers: Int
-  )
+    val layers: Int)
+
+
+  final class PipelineStageFlag(val value: Int) extends AnyVal
+  val PIPELINE_STAGE_FRAGMENT_SHADER_BIT = new PipelineStageFlag(0x00000080)
+  val PIPELINE_STAGE_HOST_BIT = new PipelineStageFlag(0x00004000)
+
+  final class AccessFlag(val value: Int) extends AnyVal
+  val ACCESS_SHADER_READ_BIT = new AccessFlag(0x00000020)
+  val ACCESS_COLOR_ATTACHMENT_READ_BIT = new AccessFlag(0x00000080)
+  val ACCESS_COLOR_ATTACHMENT_WRITE_BIT = new AccessFlag(0x00000100)
+  val ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT = new AccessFlag(0x00000200)
+  val ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT = new AccessFlag(0x00000400)
+  val ACCESS_TRANSFER_READ_BIT = new AccessFlag(0x00000800)
+  val ACCESS_TRANSFER_WRITE_BIT = new AccessFlag(0x00001000)
+  val ACCESS_HOST_READ_BIT = new AccessFlag(0x00002000)
+  val ACCESS_HOST_WRITE_BIT = new AccessFlag(0x00004000)
+  val ACCESS_MEMORY_READ_BIT = new AccessFlag(0x00008000)
+  val ACCESS_MEMORY_WRITE_BIT = new AccessFlag(0x00010000)
+  val ACCESS_COMMAND_PROCESS_READ_BIT_NVX = new AccessFlag(0x00020000)
+  val ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX = new AccessFlag(0x00040000)
+
+
+  final class MemoryBarrier(
+    val srcAccessMask: AccessFlag,
+    val dstAccessMask: AccessFlag)
+
+  final class BufferMemoryBarrier(
+    val srcAccessMask: AccessFlag,
+    val dstAccessMask: AccessFlag,
+    val srcQueueFamilyIndex: Int,
+    val dstQueueFamilyIndex: Int,
+    val buffer: Buffer,
+    val offset: DeviceSize,
+    val size: DeviceSize)
+
+  final class ImageMemoryBarrier(
+    val srcAccessMask: AccessFlag,
+    val dstAccessMask: AccessFlag,
+    val oldLayout: ImageLayout,
+    val newLayout: ImageLayout,
+    val srcQueueFamilyIndex: Long,
+    val dstQueueFamilyIndex: Long,
+    val image: Image,
+    val subresourceRange: ImageSubresourceRange)
 
   final class Framebuffer(val ptr: Long) extends AnyVal
 
@@ -591,13 +618,10 @@ object Vulkan {
   final class FenceCreateInfo(val flags: Int) extends AnyVal
 
   final class SubmitInfo(
-    val waitSemaphoreCount: Int,
-    val pWaitSemaphores: Array[Semaphore],
-    val pWaitDstStageMask: Array[Int],
-    val commandBufferCount: Int,
-    val pCommandBuffers: Array[CommandBuffer],
-    val signalSemaphoreCount: Int,
-    val pSignalSemaphores: Array[Semaphore]
+    val waitSemaphores: Array[Semaphore],
+    val waitDstStageMask: Array[Int],
+    val commandBuffers: Array[CommandBuffer],
+    val signalSemaphores: Array[Semaphore]
   )
   val PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT = 0x00000400
 
@@ -633,8 +657,7 @@ object Vulkan {
     val renderPass: RenderPass,
     val framebuffer: Framebuffer,
     val renderArea: Rect2D,
-    val clearValueCount: Int,
-    val pClearValues: Array[ClearValue])
+    val clearValues: Array[ClearValue])
 
   final class SubpassContents(val contents: Int) extends AnyVal
   val SUBPASS_CONTENTS_INLINE = new SubpassContents(0) 
@@ -649,15 +672,12 @@ object Vulkan {
 
   final class PipelineDynamicStateCreateInfo(
     val flags: Int,
-    val dynamicStateCount: Int,
-    val pDynamicStates: Array[DynamicState])
+    val dynamicStates: Array[DynamicState])
 
   final class PipelineVertexInputStateCreateInfo(
     val flags: Int,
-    val vertexBindingDescriptionCount: Int,
-    val pVertexBindingDescriptions: Array[VertexInputBindingDescription],
-    val vertexAttributeDescriptionCount: Int,
-    val pVertexAttributeDescriptions: Array[VertexInputAttributeDescription])
+    val vertexBindingDescriptions: Array[VertexInputBindingDescription],
+    val vertexAttributeDescriptions: Array[VertexInputAttributeDescription])
 
   final class PrimitiveTopology(val value: Int) extends AnyVal
   val PRIMITIVE_TOPOLOGY_TRIANGLE_LIST = new PrimitiveTopology(3)
@@ -697,8 +717,7 @@ object Vulkan {
     val flags: Int,
     val logicOpEnable: Boolean,
     val logicOp: LogicOp,
-    val attachmentCount: Int,
-    val pAttachments: Array[PipelineColorBlendAttachmentState],
+    val attachments: Array[PipelineColorBlendAttachmentState],
     val blendConstants: Array[Float])
 
   final class BlendFactor(val value: Int) extends AnyVal
@@ -728,11 +747,12 @@ object Vulkan {
   final class PipelineViewportStateCreateInfo(
     val flags: Int,
     val viewportCount: Int,
-    val pViewports: Array[Viewport],
+    val viewports: Array[Viewport],
     val scissorCount: Int,
-    val pScissors: Array[Rect2D])
+    val scissors: Array[Rect2D])
 
   final class CompareOp(val value: Int) extends AnyVal
+  val COMPARE_OP_NEVER = new CompareOp(0)
   val COMPARE_OP_LESS_OR_EQUAL = new CompareOp(3)
   val COMPARE_OP_ALWAYS = new CompareOp(7)
 
@@ -765,7 +785,7 @@ object Vulkan {
     val rasterizationSamples: Int,
     val sampleShadingEnable: Boolean,
     val minSampleShading: Float,
-    val pSampleMask: Int,
+    val sampleMask: Int,
     val alphaToCoverageEnable: Boolean,
     val alphaToOneEnable: Boolean)
 
@@ -773,16 +793,15 @@ object Vulkan {
 
   final class GraphicsPipelineCreateInfo(
     val flags: Int,
-    val stageCount: Int,
-    val pStages: Array[PipelineShaderStageCreateInfo],
-    val pVertexInputState: PipelineVertexInputStateCreateInfo,
-    val pInputAssemblyState: PipelineInputAssemblyStateCreateInfo,
-    val pViewportState: PipelineViewportStateCreateInfo,
-    val pRasterizationState: PipelineRasterizationStateCreateInfo,
-    val pMultisampleState: PipelineMultisampleStateCreateInfo,
-    val pDepthStencilState: PipelineDepthStencilStateCreateInfo,
-    val pColorBlendState: PipelineColorBlendStateCreateInfo,
-    val pDynamicState: PipelineDynamicStateCreateInfo,
+    val stages: Array[PipelineShaderStageCreateInfo],
+    val vertexInputState: PipelineVertexInputStateCreateInfo,
+    val inputAssemblyState: PipelineInputAssemblyStateCreateInfo,
+    val viewportState: PipelineViewportStateCreateInfo,
+    val rasterizationState: PipelineRasterizationStateCreateInfo,
+    val multisampleState: PipelineMultisampleStateCreateInfo,
+    val depthStencilState: PipelineDepthStencilStateCreateInfo,
+    val colorBlendState: PipelineColorBlendStateCreateInfo,
+    val dynamicState: PipelineDynamicStateCreateInfo,
     val layout: PipelineLayout,
     val renderPass: RenderPass,
     val subpass: Int,
@@ -805,10 +824,39 @@ object Vulkan {
   final class Result(val value: Long) extends AnyVal
   val TIMEOUT = new Result(2)
   final class PresentInfoKHR(
-    val waitSemaphoreCount: Int,
-    val pWaitSemaphores: Array[Semaphore],
-    val swapchainCount: Int,
-    val pSwapchains: Array[Swapchain],
-    val pImageIndices: Int
+    val waitSemaphores: Array[Semaphore],
+    val swapchains: Array[Swapchain],
+    val imageIndices: Int)
+
+  final class Filter(val value: Int) extends AnyVal
+  val FILTER_NEAREST = new Filter(0)
+  
+  final class SamplerMipmapMode(val value: Int) extends AnyVal
+  val SAMPLER_MIPMAP_MODE_NEAREST = new SamplerMipmapMode(0)
+
+  final class SamplerAddressMode(val value: Int) extends AnyVal
+  val SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE = new SamplerAddressMode(2)
+
+  final class BorderColor(val value: Int) extends AnyVal
+  val BORDER_COLOR_FLOAT_OPAQUE_WHITE = new BorderColor(4)
+
+  final class SamplerCreateInfo(
+    val flags: Int,
+    val magFilter: Filter,
+    val minFilter: Filter,
+    val mipmapMode: SamplerMipmapMode,
+    val addressModeU: SamplerAddressMode,
+    val addressModeV: SamplerAddressMode,
+    val addressModeW: SamplerAddressMode,
+    val mipLodBias: Float,
+    val anisotropyEnable: Boolean,
+    val maxAnisotropy: Float,
+    val compareEnable: Boolean,
+    val compareOp: CompareOp,
+    val minLod: Float,
+    val maxLod: Float,
+    val borderColor: BorderColor,
+    val unnormalizedCoordinates: Boolean
   )
+
 }

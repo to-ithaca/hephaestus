@@ -28,8 +28,8 @@ object Step06 extends Utils {
     val imageViews = initImageViews(device, swapchain, swapchainFormat)
 
     val formatProperties = vk.getPhysicalDeviceFormatProperties(physicalDevice, Vulkan.FORMAT_D16_UNORM)
-    val imageTiling = if((formatProperties.linearTilingFeatures & Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) Vulkan.IMAGE_TILING_LINEAR
-    else if((formatProperties.optimalTilingFeatures & Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) Vulkan.IMAGE_TILING_OPTIONAL
+    val imageTiling = if(Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT & formatProperties.linearTilingFeatures) Vulkan.IMAGE_TILING_LINEAR
+    else if(Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT & formatProperties.optimalTilingFeatures) Vulkan.IMAGE_TILING_OPTIONAL
     else throw new Error("depth not supported")
 
     val depthImageInfo = new Vulkan.ImageCreateInfo(
@@ -46,8 +46,7 @@ object Step06 extends Utils {
       tiling = imageTiling,
       initialLayout = Vulkan.IMAGE_LAYOUT_UNDEFINED,
       usage = Vulkan.IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty,
+      queueFamilyIndices = Array.empty,
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE)
     val depthImage = vk.createImage(device, depthImageInfo)
     val depthImageMemoryRequirements = vk.getImageMemoryRequirements(device, depthImage)

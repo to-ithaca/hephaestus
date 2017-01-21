@@ -17,20 +17,16 @@ trait Utils {
   val FENCE_TIMEOUT  = 100000000
   def initInstance(): Vulkan.Instance = {
     val appInfo = new Vulkan.ApplicationInfo(
-      pNext = 0,
-      pApplicationName = "helloWorld",
+      applicationName = "helloWorld",
       applicationVersion = 1,
-      pEngineName = "helloWorld",
+      engineName = "helloWorld",
       engineVersion = 1,
       apiVersion = Vulkan.API_VERSION_1_0
     )
     val instanceCreateInfo = new Vulkan.InstanceCreateInfo(
-      pNext = 0,
-      pApplicationInfo = appInfo,
-      enabledExtensionCount = 0,
-      ppEnabledExtensionNames = Array.empty[String],
-      enabledLayerCount = 0,
-      ppEnabledLayerNames = Array.empty[String]
+      applicationInfo = appInfo,
+      enabledExtensionNames = Array.empty[String],
+      enabledLayerNames = Array.empty[String]
     )
     vk.createInstance(instanceCreateInfo)
   }
@@ -43,21 +39,13 @@ trait Utils {
     }.map(_._2).get
 
     val dqinfo = new Vulkan.DeviceQueueCreateInfo(
-      pNext = 0,
       flags = 0,
       queueFamilyIndex = qi,
-      queueCount = 1,
-      pQueuePriorities = Array(0f)
+      queuePriorities = Array(0f)
     )
     val dinfo = new Vulkan.DeviceCreateInfo(
-      pNext = 0,
-      flags = 0,
-      queueCreateInfoCount = 1,
-      pQueueCreateInfos = Array(dqinfo),
-      enabledLayerCount = 0,
-      ppEnabledLayerNames = Array.empty[String],
-      enabledExtensionCount = 0,
-      ppEnabledExtensionNames = Array.empty[String])
+      queueCreateInfos = Array(dqinfo),
+      enabledExtensionNames = Array.empty[String])
     vk.createDevice(physicalDevice, dinfo)
   }
 
@@ -69,21 +57,13 @@ trait Utils {
     }.map(_._2).get
 
     val dqinfo = new Vulkan.DeviceQueueCreateInfo(
-      pNext = 0,
       flags = 0,
       queueFamilyIndex = qi,
-      queueCount = 1,
-      pQueuePriorities = Array(0f)
+      queuePriorities = Array(0f)
     )
     val dinfo = new Vulkan.DeviceCreateInfo(
-      pNext = 0,
-      flags = 0,
-      queueCreateInfoCount = 1,
-      pQueueCreateInfos = Array(dqinfo),
-      enabledLayerCount = 1,
-      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_API_DUMP_NAME),
-      enabledExtensionCount = 0,
-      ppEnabledExtensionNames = Array.empty[String])
+      queueCreateInfos = Array(dqinfo),
+      enabledExtensionNames = Array.empty[String])
     vk.createDevice(physicalDevice, dinfo)
   }
 
@@ -96,43 +76,35 @@ trait Utils {
 
   def initInstanceExtensions(): Vulkan.Instance = {
     val appInfo = new Vulkan.ApplicationInfo(
-      pNext = 0,
-      pApplicationName = "helloWorld",
+      applicationName = "helloWorld",
       applicationVersion = 1,
-      pEngineName = "helloWorld",
+      engineName = "helloWorld",
       engineVersion = 1,
       apiVersion = Vulkan.API_VERSION_1_0
     )
     val extensions = glfw.getRequiredInstanceExtensions()
     val instanceCreateInfo = new Vulkan.InstanceCreateInfo(
-      pNext = 0,
-      pApplicationInfo = appInfo,
-      enabledExtensionCount = extensions.size,
-      ppEnabledExtensionNames = extensions,
-      enabledLayerCount = 0,
-      ppEnabledLayerNames = Array.empty
+      applicationInfo = appInfo,
+      enabledExtensionNames = extensions,
+      enabledLayerNames = Array.empty
     )
     vk.createInstance(instanceCreateInfo)
   }
 
   def initInstanceExtensionsDebug(): Vulkan.Instance = {
     val appInfo = new Vulkan.ApplicationInfo(
-      pNext = 0,
-      pApplicationName = "helloWorld",
+      applicationName = "helloWorld",
       applicationVersion = 1,
-      pEngineName = "helloWorld",
+      engineName = "helloWorld",
       engineVersion = 1,
       apiVersion = Vulkan.API_VERSION_1_0
     )
     val extensions = (Vulkan.EXT_DEBUG_REPORT_EXTENSION_NAME :: glfw.getRequiredInstanceExtensions().toList).toArray[String]
     println(s"extensions should be ${extensions.toList}")
     val instanceCreateInfo = new Vulkan.InstanceCreateInfo(
-      pNext = 0,
-      pApplicationInfo = appInfo,
-      enabledExtensionCount = extensions.size,
-      ppEnabledExtensionNames = extensions,
-      enabledLayerCount = 2,
-      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_STANDARD_VALIDATION_NAME, Vulkan.LAYER_LUNARG_API_DUMP_NAME)
+      applicationInfo = appInfo,
+      enabledExtensionNames = extensions,
+      enabledLayerNames = Array(Vulkan.LAYER_LUNARG_STANDARD_VALIDATION_NAME, Vulkan.LAYER_LUNARG_API_DUMP_NAME)
     )
     val inst = vk.createInstance(instanceCreateInfo)
     vk.debugReport(inst)
@@ -146,22 +118,18 @@ trait Utils {
   }
   def initInstanceExtensionsDump(): Vulkan.Instance = {
     val appInfo = new Vulkan.ApplicationInfo(
-      pNext = 0,
-      pApplicationName = "helloWorld",
+      applicationName = "helloWorld",
       applicationVersion = 1,
-      pEngineName = "helloWorld",
+      engineName = "helloWorld",
       engineVersion = 1,
       apiVersion = Vulkan.API_VERSION_1_0
     )
     val extensions = glfw.getRequiredInstanceExtensions()
     println(s"extensions should be ${extensions.toList}")
     val instanceCreateInfo = new Vulkan.InstanceCreateInfo(
-      pNext = 0,
-      pApplicationInfo = appInfo,
-      enabledExtensionCount = extensions.size,
-      ppEnabledExtensionNames = extensions,
-      enabledLayerCount = 1,
-      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_API_DUMP_NAME)
+      applicationInfo = appInfo,
+      enabledExtensionNames = extensions,
+      enabledLayerNames = Array(Vulkan.LAYER_LUNARG_API_DUMP_NAME)
     )
     val inst = vk.createInstance(instanceCreateInfo)
     val supportedExtensions = vk.enumerateInstanceLayerProperties.map(_.layerName)
@@ -185,46 +153,29 @@ trait Utils {
 
   def initDeviceExtensions(physicalDevice: Vulkan.PhysicalDevice, qi: Int): Vulkan.Device = {
     val dqinfo = new Vulkan.DeviceQueueCreateInfo(
-      pNext = 0,
       flags = 0,
       queueFamilyIndex = qi,
-      queueCount = 1,
-      pQueuePriorities = Array(0f)
+      queuePriorities = Array(0f)
     )
     val dinfo = new Vulkan.DeviceCreateInfo(
-      pNext = 0,
-      flags = 0,
-      queueCreateInfoCount = 1,
-      pQueueCreateInfos = Array(dqinfo),
-      enabledLayerCount = 0,
-      ppEnabledLayerNames = Array.empty,
-      enabledExtensionCount = 1,
-      ppEnabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME))
+      queueCreateInfos = Array(dqinfo),
+      enabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME))
     vk.createDevice(physicalDevice, dinfo)
   }
   def initDeviceExtensionsDebug(physicalDevice: Vulkan.PhysicalDevice, qi: Int): Vulkan.Device = {
     val dqinfo = new Vulkan.DeviceQueueCreateInfo(
-      pNext = 0,
       flags = 0,
       queueFamilyIndex = qi,
-      queueCount = 1,
-      pQueuePriorities = Array(0f)
+      queuePriorities = Array(0f)
     )
     val dinfo = new Vulkan.DeviceCreateInfo(
-      pNext = 0,
-      flags = 0,
-      queueCreateInfoCount = 1,
-      pQueueCreateInfos = Array(dqinfo),
-      enabledLayerCount = 2,
-      ppEnabledLayerNames = Array(Vulkan.LAYER_LUNARG_API_DUMP_NAME, Vulkan.LAYER_LUNARG_STANDARD_VALIDATION_NAME),
-      enabledExtensionCount = 1,
-      ppEnabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME))
+      queueCreateInfos = Array(dqinfo),
+      enabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME))
     vk.createDevice(physicalDevice, dinfo)
   }
 
   def initCommandPool(device: Vulkan.Device, qi: Int): Vulkan.CommandPool = {
     val commandPoolInfo = new Vulkan.CommandPoolCreateInfo(
-      pNext = 0,
       flags = Vulkan.COMMAND_POOL_BLANK_FLAG,
       queueFamilyIndex = qi)
     vk.createCommandPool(device, commandPoolInfo)
@@ -232,7 +183,6 @@ trait Utils {
 
   def initCommandBuffer(device: Vulkan.Device, commandPool: Vulkan.CommandPool): Vulkan.CommandBuffer = {
     val commandBufferAllocateInfo = new Vulkan.CommandBufferAllocateInfo(
-      pNext = 0,
       commandPool = commandPool,
       level = Vulkan.COMMAND_BUFFER_LEVEL_PRIMARY,
       commandBufferCount = 1)
@@ -286,8 +236,7 @@ trait Utils {
       imageColorSpace = Vulkan.COLORSPACE_SRGB_NONLINEAR,
       imageUsage = Vulkan.IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
       imageSharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty[Int]
+      queueFamilyIndices = Array.empty[Int]
     )
     vk.createSwapchain(device, swapchainCreateInfo)
   }
@@ -319,8 +268,8 @@ trait Utils {
 
   def initDepthImage(physicalDevice: Vulkan.PhysicalDevice, device: Vulkan.Device, swapchainExtent: Vulkan.Extent2D): Vulkan.Image = {
     val formatProperties = vk.getPhysicalDeviceFormatProperties(physicalDevice, Vulkan.FORMAT_D16_UNORM)
-    val imageTiling = if((formatProperties.linearTilingFeatures & Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) Vulkan.IMAGE_TILING_LINEAR
-    else if((formatProperties.optimalTilingFeatures & Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) > 0) Vulkan.IMAGE_TILING_OPTIONAL
+    val imageTiling = if(Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT & formatProperties.linearTilingFeatures) Vulkan.IMAGE_TILING_LINEAR
+    else if(Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT & formatProperties.optimalTilingFeatures) Vulkan.IMAGE_TILING_OPTIONAL
     else throw new Error("depth not supported")
 
     val depthImageInfo = new Vulkan.ImageCreateInfo(
@@ -337,8 +286,7 @@ trait Utils {
       tiling = imageTiling,
       initialLayout = Vulkan.IMAGE_LAYOUT_UNDEFINED,
       usage = Vulkan.IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty,
+      queueFamilyIndices = Array.empty,
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE)
     vk.createImage(device, depthImageInfo)
   }
@@ -387,8 +335,7 @@ trait Utils {
     val bufferCreateInfo = new Vulkan.BufferCreateInfo(
       usage = Vulkan.BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       size = new Vulkan.DeviceSize(size),
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty[Int],
+      queueFamilyIndices = Array.empty[Int],
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
       flags = 0)
     vk.createBuffer(device, bufferCreateInfo)
@@ -425,13 +372,12 @@ trait Utils {
   def initDescriptorSetLayout(device: Vulkan.Device): Vulkan.DescriptorSetLayout = {
     val descriptorSetLayoutInfo = new Vulkan.DescriptorSetLayoutCreateInfo(
       flags = 0,
-      bindingCount = 1,
-      pBindings = Array(new Vulkan.DescriptorSetLayoutBinding(
+      bindings = Array(new Vulkan.DescriptorSetLayoutBinding(
         binding = 0,
         descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         descriptorCount = 1,
         stageFlags = Vulkan.SHADER_STAGE_VERTEX_BIT,
-        pImmutableSamplers = Array.empty[Vulkan.Sampler]
+        immutableSamplers = Array.empty[Vulkan.Sampler]
       )))
     vk.createDescriptorSetLayout(device, descriptorSetLayoutInfo)
   }
@@ -439,10 +385,8 @@ trait Utils {
   def initPipelineLayout(device: Vulkan.Device, descriptorSetLayout: Vulkan.DescriptorSetLayout): Vulkan.PipelineLayout = {
     val pipelineLayoutInfo = new Vulkan.PipelineLayoutCreateInfo(
       flags = 0,
-      setLayoutCount = 1,
-      pSetLayouts = Array(descriptorSetLayout),
-      pushConstantRangeCount = 0,
-      pPushConstantRanges = Array.empty)
+      setLayouts = Array(descriptorSetLayout),
+      pushConstantRanges = Array.empty)
     vk.createPipelineLayout(device, pipelineLayoutInfo)
   }
 
@@ -453,8 +397,7 @@ trait Utils {
     val descriptorPoolCreateInfo = new Vulkan.DescriptorPoolCreateInfo(
       flags = 0,
       maxSets = 1,
-      poolSizeCount = 1,
-      pPoolSizes = Array(descriptorPoolSize)
+      poolSizes = Array(descriptorPoolSize)
     )
     vk.createDescriptorPool(device, descriptorPoolCreateInfo)
   }
@@ -463,8 +406,7 @@ trait Utils {
     buffer: Vulkan.Buffer, size: Int): Array[Vulkan.DescriptorSet] = {
     val descriptorSetAllocateInfo = new Vulkan.DescriptorSetAllocateInfo(
       descriptorPool = descriptorPool,
-      descriptorSetCount = 1,
-      pSetLayouts = Array(descriptorSetLayout)
+      setLayouts = Array(descriptorSetLayout)
     )
 
     val descriptorSets = vk.allocateDescriptorSets(device, descriptorSetAllocateInfo)
@@ -479,9 +421,9 @@ trait Utils {
       dstArrayElement = 0,
       descriptorCount = 1,
       descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      pImageInfo = Array.empty[Vulkan.DescriptorImageInfo],
-      pBufferInfo = Array(bufferInfo),
-      pTexelBufferView = Array.empty[Vulkan.BufferView]
+      imageInfo = Array.empty[Vulkan.DescriptorImageInfo],
+      bufferInfo = Array(bufferInfo),
+      texelBufferView = Array.empty[Vulkan.BufferView]
     )
 
     vk.updateDescriptorSets(device, 1, Array(writeDescriptorSet), 0, Array.empty[Vulkan.CopyDescriptorSet])
@@ -524,24 +466,18 @@ trait Utils {
     val subpass = new Vulkan.SubpassDescription(
       pipelineBindPoint = Vulkan.PIPELINE_BIND_POINT_GRAPHICS,
       flags = 0,
-      inputAttachmentCount = 0,
-      pInputAttachments = Array.empty[Vulkan.AttachmentReference],
-      colorAttachmentCount = 1,
-      pColorAttachments = Array(colorReference),
-      pResolveAttachments = Array.empty[Vulkan.AttachmentReference],
-      pDepthStencilAttachment = Array(depthReference),
-      preserveAttachmentCount = 0,
-      pPreserveAttachments = Array.empty[Int]
+      inputAttachments = Array.empty[Vulkan.AttachmentReference],
+      colorAttachments = Array(colorReference),
+      resolveAttachments = Array.empty[Vulkan.AttachmentReference],
+      depthStencilAttachment = Array(depthReference),
+      preserveAttachments = Array.empty[Int]
     )
 
     val renderPassCreateInfo = new Vulkan.RenderPassCreateInfo(
       flags = 0,
-      attachmentCount = 2,
-      pAttachments = Array(colorAttachment, depthAttachment),
-      subpassCount = 1,
-      pSubpasses = Array(subpass),
-      dependencyCount = 0,
-      pDependencies = Array.empty
+      attachments = Array(colorAttachment, depthAttachment),
+      subpasses = Array(subpass),
+      dependencies = Array.empty
     )
 
     vk.createRenderPass(device, renderPassCreateInfo)
@@ -561,7 +497,7 @@ trait Utils {
     val info = new Vulkan.ShaderModuleCreateInfo(
       flags = 0,
       codeSize = spv.capacity,
-      pCode = spv
+      code = spv
     )
     vk.createShaderModule(device, info)
   }
@@ -572,8 +508,7 @@ trait Utils {
       val framebufferCreateInfo = new Vulkan.FramebufferCreateInfo(
         flags = 0,
         renderPass = renderPass,
-        attachmentCount = 2,
-        pAttachments = Array(v, depthImageView),
+        attachments = Array(v, depthImageView),
         width = width,
         height = height,
         layers = 1
@@ -585,13 +520,10 @@ trait Utils {
 
   def submitQueue(device: Vulkan.Device, fence: Vulkan.Fence, commandBuffer: Vulkan.CommandBuffer, graphicsQueue: Vulkan.Queue): Unit = {
     val submitInfo = new Vulkan.SubmitInfo(
-      waitSemaphoreCount = 0,
-      pWaitSemaphores = Array.empty[Vulkan.Semaphore],
-      pWaitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-      commandBufferCount = 1,
-      pCommandBuffers = Array(commandBuffer),
-      signalSemaphoreCount = 0,
-      pSignalSemaphores = Array.empty[Vulkan.Semaphore])
+      waitSemaphores = Array.empty[Vulkan.Semaphore],
+      waitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+      commandBuffers = Array(commandBuffer),
+      signalSemaphores = Array.empty[Vulkan.Semaphore])
     vk.queueSubmit(graphicsQueue, 1, Array(submitInfo), fence)
     vk.waitForFences(device, 1, Array(fence), true, FENCE_TIMEOUT)
   }
@@ -600,8 +532,7 @@ trait Utils {
     val bufferCreateInfo = new Vulkan.BufferCreateInfo(
       usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT,
       size = new Vulkan.DeviceSize(size),
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty[Int],
+      queueFamilyIndices = Array.empty[Int],
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
       flags = 0)
     vk.createBuffer(device, bufferCreateInfo)
@@ -620,8 +551,7 @@ trait Utils {
       renderArea = new Vulkan.Rect2D(
         offset = new Vulkan.Offset2D(x = 0, y = 0),
         extent = new Vulkan.Extent2D(width = width, height = height)),
-      clearValueCount = clearValues.size,
-      pClearValues = clearValues
+      clearValues = clearValues
     )
 
     vk.cmdBeginRenderPass(commandBuffer, renderPassBeginInfo, Vulkan.SUBPASS_CONTENTS_INLINE)
@@ -650,25 +580,22 @@ trait Utils {
       flags = 0,
       stage = Vulkan.SHADER_STAGE_VERTEX_BIT,
       module = vertexModule,
-      pName = "main"
+      name = "main"
     )
     val fragmentShaderStage = new Vulkan.PipelineShaderStageCreateInfo(
       flags = 0,
       stage = Vulkan.SHADER_STAGE_FRAGMENT_BIT,
       module = fragmentModule,
-      pName = "main"
+      name = "main"
     )
     val vertexInputStateCreateInfo = new Vulkan.PipelineVertexInputStateCreateInfo(
       flags = 0,
-      vertexBindingDescriptionCount = 1,
-      pVertexBindingDescriptions = Array(vertexBinding),
-      vertexAttributeDescriptionCount = 2,
-      pVertexAttributeDescriptions = Array(vertexAttrib0, vertexAttrib1))
+      vertexBindingDescriptions = Array(vertexBinding),
+      vertexAttributeDescriptions = Array(vertexAttrib0, vertexAttrib1))
 
     val dynamicState = new Vulkan.PipelineDynamicStateCreateInfo(
       flags = 0,
-      dynamicStateCount = 2,
-      pDynamicStates = Array(
+      dynamicStates = Array(
         Vulkan.DYNAMIC_STATE_VIEWPORT,
         Vulkan.DYNAMIC_STATE_SCISSOR))
 
@@ -701,8 +628,7 @@ trait Utils {
     )
     val colorBlendStateCreateInfo = new Vulkan.PipelineColorBlendStateCreateInfo(
       flags = 0,
-      attachmentCount = 1,
-      pAttachments = Array(colorBlendAttachmentState),
+      attachments = Array(colorBlendAttachmentState),
       logicOpEnable = false,
       logicOp = Vulkan.LOGIC_OP_NO_OP,
       blendConstants = Array(1f, 1f, 1f, 1f)
@@ -710,9 +636,9 @@ trait Utils {
     val viewportStateCreateInfo = new Vulkan.PipelineViewportStateCreateInfo(
       flags = 0,
       viewportCount = 1,
-      pViewports = Array.empty,
+      viewports = Array.empty,
       scissorCount = 1,
-      pScissors = Array.empty)
+      scissors = Array.empty)
     val depthStencilOpState = new Vulkan.StencilOpState(
       failOp = Vulkan.STENCIL_OP_KEEP,
       passOp = Vulkan.STENCIL_OP_KEEP,
@@ -734,7 +660,7 @@ trait Utils {
       front = depthStencilOpState)
     val multisampleStateCreateInfo = new Vulkan.PipelineMultisampleStateCreateInfo(
       flags = 0,
-      pSampleMask = 0,
+      sampleMask = 0,
       rasterizationSamples = Vulkan.SAMPLE_COUNT_1_BIT,
       sampleShadingEnable = false,
       alphaToCoverageEnable = false,
@@ -745,16 +671,15 @@ trait Utils {
       basePipelineHandle = new Vulkan.Pipeline(0),
       basePipelineIndex = 0,
       flags = 0,
-      pVertexInputState = vertexInputStateCreateInfo,
-      pInputAssemblyState = inputAssemblyStateCreateInfo,
-      pRasterizationState = rasterizationStateCreateInfo,
-      pColorBlendState = colorBlendStateCreateInfo,
-      pMultisampleState = multisampleStateCreateInfo,
-      pDynamicState = dynamicState,
-      pViewportState = viewportStateCreateInfo,
-      pDepthStencilState = depthStencilStateCreateInfo,
-      pStages = Array(vertexShaderStage, fragmentShaderStage),
-      stageCount = 2,
+      vertexInputState = vertexInputStateCreateInfo,
+      inputAssemblyState = inputAssemblyStateCreateInfo,
+      rasterizationState = rasterizationStateCreateInfo,
+      colorBlendState = colorBlendStateCreateInfo,
+      multisampleState = multisampleStateCreateInfo,
+      dynamicState = dynamicState,
+      viewportState = viewportStateCreateInfo,
+      depthStencilState = depthStencilStateCreateInfo,
+      stages = Array(vertexShaderStage, fragmentShaderStage),
       renderPass = renderPass,
       subpass = 0
     )
@@ -765,13 +690,10 @@ trait Utils {
   def submitQueueWait(device: Vulkan.Device, fence: Vulkan.Fence, commandBuffer: Vulkan.CommandBuffer, graphicsQueue: Vulkan.Queue,
     semaphore: Vulkan.Semaphore): Unit = {
     val submitInfo = new Vulkan.SubmitInfo(
-      waitSemaphoreCount = 1,
-      pWaitSemaphores = Array(semaphore),
-      pWaitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
-      commandBufferCount = 1,
-      pCommandBuffers = Array(commandBuffer),
-      signalSemaphoreCount = 0,
-      pSignalSemaphores = Array.empty[Vulkan.Semaphore])
+      waitSemaphores = Array(semaphore),
+      waitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+      commandBuffers = Array(commandBuffer),
+      signalSemaphores = Array.empty[Vulkan.Semaphore])
     vk.queueSubmit(graphicsQueue, 1, Array(submitInfo), fence)
     var shouldWait = true
     while(shouldWait) {

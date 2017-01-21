@@ -41,22 +41,19 @@ object Step08 extends Utils {
 
     val descriptorSetLayoutInfo = new Vulkan.DescriptorSetLayoutCreateInfo(
       flags = 0,
-      bindingCount = 1,
-      pBindings = Array(new Vulkan.DescriptorSetLayoutBinding(
+      bindings = Array(new Vulkan.DescriptorSetLayoutBinding(
         binding = 0,
         descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         descriptorCount = 1,
         stageFlags = Vulkan.SHADER_STAGE_VERTEX_BIT,
-        pImmutableSamplers = Array.empty[Vulkan.Sampler]
+        immutableSamplers = Array.empty[Vulkan.Sampler]
       )))
     println("create description")
     val descriptorSetLayout = vk.createDescriptorSetLayout(device, descriptorSetLayoutInfo)
     val pipelineLayoutInfo = new Vulkan.PipelineLayoutCreateInfo(
       flags = 0,
-      setLayoutCount = 1,
-      pSetLayouts = Array(descriptorSetLayout),
-      pushConstantRangeCount = 0,
-      pPushConstantRanges = Array.empty)
+      setLayouts = Array(descriptorSetLayout),
+      pushConstantRanges = Array.empty)
     println("createPipelineLayout")
     val pipelineLayout = vk.createPipelineLayout(device, pipelineLayoutInfo)
     println("created pipeline")

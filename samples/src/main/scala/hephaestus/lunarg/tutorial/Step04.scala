@@ -12,13 +12,11 @@ object Step04 extends Utils {
 
     val graphicsQueueFamilyIndex = initGraphicsQueueFamilyIndex(physicalDevice)
     val commandPoolInfo = new Vulkan.CommandPoolCreateInfo(
-      pNext = 0,
       flags = Vulkan.COMMAND_POOL_BLANK_FLAG,
       queueFamilyIndex = graphicsQueueFamilyIndex)
     val commandPool = vk.createCommandPool(device, commandPoolInfo)
 
     val commandBufferAllocateInfo = new Vulkan.CommandBufferAllocateInfo(
-      pNext = 0,
       commandPool = commandPool,
       level = Vulkan.COMMAND_BUFFER_LEVEL_PRIMARY,
       commandBufferCount = 1)

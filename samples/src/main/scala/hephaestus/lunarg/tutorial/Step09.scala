@@ -49,14 +49,12 @@ object Step09 extends Utils {
     val descriptorPoolCreateInfo = new Vulkan.DescriptorPoolCreateInfo(
       flags = 0,
       maxSets = 1,
-      poolSizeCount = 1,
-      pPoolSizes = Array(descriptorPoolSize)
+      poolSizes = Array(descriptorPoolSize)
     )
     val descriptorPool = vk.createDescriptorPool(device, descriptorPoolCreateInfo)
     val descriptorSetAllocateInfo = new Vulkan.DescriptorSetAllocateInfo(
       descriptorPool = descriptorPool,
-      descriptorSetCount = 1,
-      pSetLayouts = Array(descriptorSetLayout)
+      setLayouts = Array(descriptorSetLayout)
     )
 
     val descriptorSets = vk.allocateDescriptorSets(device, descriptorSetAllocateInfo)
@@ -71,9 +69,9 @@ object Step09 extends Utils {
       dstArrayElement = 0,
       descriptorCount = 1,
       descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-      pImageInfo = Array.empty[Vulkan.DescriptorImageInfo],
-      pBufferInfo = Array(bufferInfo),
-      pTexelBufferView = Array.empty[Vulkan.BufferView]
+      imageInfo = Array.empty[Vulkan.DescriptorImageInfo],
+      bufferInfo = Array(bufferInfo),
+      texelBufferView = Array.empty[Vulkan.BufferView]
     )
 
     vk.updateDescriptorSets(device, 1, Array(writeDescriptorSet), 0, Array.empty[Vulkan.CopyDescriptorSet])

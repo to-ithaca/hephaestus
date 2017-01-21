@@ -61,8 +61,7 @@ object Step05 extends Utils {
       imageColorSpace = Vulkan.COLORSPACE_SRGB_NONLINEAR,
       imageUsage = Vulkan.IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
       imageSharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty[Int]
+      queueFamilyIndices = Array.empty[Int]
     )
     val swapchain = vk.createSwapchain(device, swapchainCreateInfo)
 

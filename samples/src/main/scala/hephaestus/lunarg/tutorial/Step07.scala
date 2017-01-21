@@ -39,8 +39,7 @@ object Step07 extends Utils {
     val bufferCreateInfo = new Vulkan.BufferCreateInfo(
       usage = Vulkan.BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       size = new Vulkan.DeviceSize(uniformData.capacity),
-      queueFamilyIndexCount = 0,
-      pQueueFamilyIndices = Array.empty[Int],
+      queueFamilyIndices = Array.empty[Int],
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
       flags = 0)
     val buffer = vk.createBuffer(device, bufferCreateInfo)

@@ -1,7 +1,7 @@
 package hephaestus
 package io
 
-import java.nio.ByteBuffer
+import java.nio.{ByteBuffer, ByteOrder}
 import java.{nio => jio}
 
 import sun.nio.ch.DirectBuffer
@@ -18,6 +18,8 @@ final class Buffer[A](val value: jio.ByteBuffer) extends AnyVal { self =>
   }
 
   def direct: Boolean = value.isDirect
+ 
+  def order: ByteOrder = value.order
 
   def position(implicit bytes: ops.buffer.Bytes[A]): Int = value.position() / bytes.N
 
@@ -69,5 +71,5 @@ object Buffer {
 
   def empty[A](n: Int)(implicit bytes: ops.buffer.Bytes[A]): Buffer[A] = new Buffer[A](ByteBuffer.allocate(n * bytes.N))
 
-  def emptyDirect[A](n: Int)(implicit size: ops.buffer.Bytes[A]): Buffer[A] = new Buffer(ByteBuffer.allocateDirect(n * size.N))
+  def emptyDirect[A](n: Int)(implicit size: ops.buffer.Bytes[A]): Buffer[A] = new Buffer(ByteBuffer.allocateDirect(n * size.N).order(ByteOrder.nativeOrder()))
 }
