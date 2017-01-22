@@ -11,7 +11,7 @@ object Step18 extends Utils {
   def main(args: Array[String]): Unit = {
     glfw.init()
 
-    val instance = initInstanceExtensions()
+    val instance = initInstanceExtensionsDebug()
 
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
     val width = 500
@@ -48,9 +48,9 @@ object Step18 extends Utils {
     val depthImageView = initDepthImageView(device, depthImage)
 
     val graphicsQueue = vk.getDeviceQueue(device, qi, 0)
-    val textureCommandBuffer = initCommandBuffer(device, commandPool)
-    vk.beginCommandBuffer(textureCommandBuffer, new Vulkan.CommandBufferBeginInfo(flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
-      inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE))
+    // val textureCommandBuffer = initCommandBuffer(device, commandPool)
+    // vk.beginCommandBuffer(textureCommandBuffer, new Vulkan.CommandBufferBeginInfo(flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
+    //   inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE))
 
     //bind a texture too
     val textureFormatProperties = vk.getPhysicalDeviceFormatProperties(physicalDevice, Vulkan.FORMAT_R8G8B8A8_UNORM)
@@ -87,27 +87,27 @@ object Step18 extends Utils {
       arrayLayer = 0
     )
 
-    setImageLayout(Vulkan.IMAGE_LAYOUT_PREINITIALIZED, Vulkan.IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      textureImage, Vulkan.IMAGE_ASPECT_COLOR_BIT, Vulkan.PIPELINE_STAGE_HOST_BIT, 
-      Vulkan.PIPELINE_STAGE_FRAGMENT_SHADER_BIT, textureCommandBuffer)
-    vk.endCommandBuffer(textureCommandBuffer)
-    val textureFence = vk.createFence(device, new Vulkan.FenceCreateInfo(0))
-    vk.queueSubmit(graphicsQueue, 1, Array(new Vulkan.SubmitInfo(
-      waitSemaphores = Array.empty,
-      commandBuffers = Array(textureCommandBuffer),
-      signalSemaphores = Array.empty,
-      waitDstStageMask = Array.empty
-    )), textureFence)
+    // setImageLayout(Vulkan.IMAGE_LAYOUT_PREINITIALIZED, Vulkan.IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //   textureImage, Vulkan.IMAGE_ASPECT_COLOR_BIT, Vulkan.PIPELINE_STAGE_HOST_BIT, 
+    //   Vulkan.PIPELINE_STAGE_FRAGMENT_SHADER_BIT, textureCommandBuffer)
+    // vk.endCommandBuffer(textureCommandBuffer)
+    // val textureFence = vk.createFence(device, new Vulkan.FenceCreateInfo(0))
+    // vk.queueSubmit(graphicsQueue, 1, Array(new Vulkan.SubmitInfo(
+    //   waitSemaphores = Array.empty,
+    //   commandBuffers = Array(textureCommandBuffer),
+    //   signalSemaphores = Array.empty,
+    //   waitDstStageMask = Array.empty
+    // )), textureFence)
 
-    var hasLoadedTexture = false
-    while(!hasLoadedTexture) {
-      println("waiting for texture fence")
-      val res = vk.waitForFences(device, 1, Array(textureFence), true, FENCE_TIMEOUT)
-      if(res != Vulkan.TIMEOUT) hasLoadedTexture = true
-    }
+    // var hasLoadedTexture = false
+    // while(!hasLoadedTexture) {
+    //   println("waiting for texture fence")
+    //   val res = vk.waitForFences(device, 1, Array(textureFence), true, FENCE_TIMEOUT)
+    //   if(res != Vulkan.TIMEOUT) hasLoadedTexture = true
+    // }
 
 
-    val textureLayout = vk.getImageSubresourceLayout(device, textureImage, imageSubresource)
+    // val textureLayout = vk.getImageSubresourceLayout(device, textureImage, imageSubresource)
     val textureDataPtr = vk.mapMemory(device, textureMemory, new Vulkan.DeviceSize(0), textureImageMemoryRequirements.size, 0)
     vk.loadMemory(textureDataPtr, Cube.textureData(textureWidth, textureHeight, 0))
     vk.unmapMemory(device, textureMemory)

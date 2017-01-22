@@ -106,6 +106,7 @@ class Vulkan {
 
   @native def cmdPipelineBarrier(buffer: CommandBuffer, srcStageMask: PipelineStageFlag, dstStageMask: PipelineStageFlag, dependencyFlags: Int, memoryBarriers: Array[MemoryBarrier], bufferMemoryBarriers: Array[BufferMemoryBarrier], imageMemoryBarriers: Array[ImageMemoryBarrier])
   @native def createSampler(device: Device, info: SamplerCreateInfo): Sampler
+  @native def destroySampler(device: Device, sampler: Sampler): Unit
 }
 
 object Vulkan {
@@ -210,6 +211,7 @@ object Vulkan {
 
   final class Format(val format: Int) extends AnyVal
   val FORMAT_UNDEFINED = new Format(0)
+  val FORMAT_R8G8B8_UNORM = new Format(23)
   val FORMAT_R8G8B8A8_UNORM = new Format(37)
   val FORMAT_B8G8R8A8_UNORM = new Format(44)
   val FORMAT_D16_UNORM = new Format(124)
@@ -835,6 +837,7 @@ final class SubresourceLayout(
   val SAMPLER_MIPMAP_MODE_NEAREST = new SamplerMipmapMode(0)
 
   final class SamplerAddressMode(val value: Int) extends AnyVal
+  val SAMPLER_ADDRESS_MODE_REPEAT = new SamplerAddressMode(0)
   val SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE = new SamplerAddressMode(2)
 
   final class BorderColor(val value: Int) extends AnyVal

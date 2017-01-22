@@ -102,8 +102,8 @@ object Cube {
   def uniformData(width: Int, height: Int, frame: Int): ByteBuffer = {
     val angle = (frame % 1000).toDouble / 1000.0
     val radius = math.sqrt(34.0)
-    val eyeX = radius * math.cos(angle * 2.0 * math.Pi)
-    val eyeY = radius * math.sin(angle * 2.0 * math.Pi)
+    val eyeX = radius * math.cos(angle *  math.Pi)
+    val eyeY = radius //* math.sin(angle * 2.0 * math.Pi)
 
     val aspect = if(width > height) height.toFloat / width.toFloat else 1f
     val fov = aspect * 45.0f

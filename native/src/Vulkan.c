@@ -2402,3 +2402,8 @@ JNIEXPORT jlong JNICALL Java_hephaestus_platform_Vulkan_createSampler
   vkCreateSampler((VkDevice) device, &v_info, NULL, &s);
   return s;
 }
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_destroySampler
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong device, jlong sampler) {
+  vkDestroySampler((VkDevice) device, (VkSampler) sampler, NULL);
+}

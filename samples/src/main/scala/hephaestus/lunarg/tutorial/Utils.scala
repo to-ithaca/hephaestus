@@ -487,7 +487,7 @@ trait Utils {
     val ints = MutableList[Int]()
     val file = new File(getClass.getResource(s"/$name").toURI())
     val bytes = Files.readAllBytes(file.toPath())
-    val buf = ByteBuffer.allocateDirect(bytes.size)
+    val buf = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
     buf.put(bytes, 0, bytes.size)
     buf
   }
