@@ -16,7 +16,9 @@ class Vulkan {
   @native def destroyDevice(d: Device): Unit
   @native def createCommandPool(device: Device, info: CommandPoolCreateInfo): CommandPool 
   @native def destroyCommandPool(device: Device, pool: CommandPool): Unit
+  //FIXME: should generate an array
   @native def allocateCommandBuffers(device: Device, info: CommandBufferAllocateInfo): CommandBuffer
+  //FIXME: should take in an array
   @native def freeCommandBuffers(device: Device, pool: CommandPool, count: Int, buffer: CommandBuffer): Unit 
 
   @native def destroySurfaceKHR(inst: Instance, surface: Surface): Unit
@@ -83,6 +85,9 @@ class Vulkan {
 
   @native def cmdBeginRenderPass(buffer: CommandBuffer, info: RenderPassBeginInfo, contents: SubpassContents): Unit
   @native def cmdBindVertexBuffers(commandBuffer: CommandBuffer, firstBinding: Int, bindingCount: Int, buffers: Array[Buffer], offsets: Array[DeviceSize]): Unit
+
+  @native def cmdBindIndexBuffer(commandBuffer: CommandBuffer, buffer: Buffer, offset: DeviceSize, indexType: IndexType): Unit
+
   @native def cmdEndRenderPass(buffer: CommandBuffer): Unit
   @native def cmdExecuteCommands(buffer: CommandBuffer, count: Int, buffers: Array[CommandBuffer]): Unit
 
@@ -102,6 +107,7 @@ class Vulkan {
   @native def cmdSetViewport(buffer: CommandBuffer, firstViewport: Int, viewportCount: Int, viewports: Array[Viewport]): Unit
   @native def cmdSetScissor(buffer: CommandBuffer, firstScissor: Int, scissorCount: Int, scissor: Array[Rect2D]): Unit
   @native def cmdDraw(buffer: CommandBuffer, vertexCount: Int, instanceCount: Int, firstVertex: Int, firstInstance: Int): Unit
+  @native def cmdDrawIndexed(buffer: CommandBuffer, indexCount: Int, instanceCount: Int, firstIndex: Int, vertexOffset: Int, firstInstance: Int): Unit
   @native def queuePresentKHR(queue: Queue, info: PresentInfoKHR): Unit
 
   @native def cmdPipelineBarrier(buffer: CommandBuffer, srcStageMask: PipelineStageFlag, dstStageMask: PipelineStageFlag, dependencyFlags: Int, memoryBarriers: Array[MemoryBarrier], bufferMemoryBarriers: Array[BufferMemoryBarrier], imageMemoryBarriers: Array[ImageMemoryBarrier])
@@ -215,6 +221,7 @@ object Vulkan {
   val FORMAT_R8G8B8A8_UNORM = new Format(37)
   val FORMAT_B8G8R8A8_UNORM = new Format(44)
   val FORMAT_D16_UNORM = new Format(124)
+  val FORMAT_R32G32B32_SFLOAT = new Format(106)
   val FORMAT_R32G32B32A32_SFLOAT = new Format(109)
   val FORMAT_R32G32_SFLOAT = new Format(103)
 
@@ -389,6 +396,7 @@ final class SubresourceLayout(
 
 
   val BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x00000010
+  val BUFFER_USAGE_INDEX_BUFFER_BIT = 0x00000040
   val BUFFER_USAGE_VERTEX_BUFFER_BIT = 0x00000080
   val MEMORY_PROPERTY_HOST_VISIBLE_BIT = 0x00000002
   val MEMORY_PROPERTY_HOST_COHERENT_BIT = 0x00000004
@@ -862,4 +870,6 @@ final class SubresourceLayout(
     val unnormalizedCoordinates: Boolean
   )
 
+  final class IndexType(val value: Int) extends AnyVal
+  val INDEX_TYPE_UINT32 = new IndexType(1)
 }

@@ -183,5 +183,6 @@ object Cube {
     UVVertex(XYZ1( 1, 1, 1), UV(0f, 1f)),  // rgt-btm-back
     UVVertex(XYZ1( 1,-1, 1), UV(0f, 0f))  // rgt-top-back
   )
+  val solidFaceUvsElementData: ByteBuffer = Buffer.direct((0 to 36).toList :_*).value
   val solidFaceUvsData: ByteBuffer = Buffer.direct(solidFaceUvs.flatMap(_.list):_*).value
 }

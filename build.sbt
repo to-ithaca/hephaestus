@@ -33,6 +33,9 @@ lazy val commonSettings = Seq(
   scalacOptions ++= commonScalacOptions,
   libraryDependencies ++= Seq(
     "com.hackoeur" % "jglm" % "1.0.0",
+    "org.typelevel" %% "cats-core" % "0.9.0",
+    "org.scodec" %% "scodec-stream" % "1.0.1",
+    "org.scodec" %% "scodec-cats" % "0.2.0",
     "org.scalatest" %% "scalatest" % "3.0.1" % "test"
   )
 ) ++ coverageSettings ++ buildSettings

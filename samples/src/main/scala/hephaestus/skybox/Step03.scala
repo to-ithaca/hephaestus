@@ -6,10 +6,16 @@ import hephaestus.io.Buffer
 
 import java.nio.{ByteBuffer, ByteOrder}
 import java.io.File
+import java.io.InputStream
 import java.nio.file.Files
 
 import javax.imageio._
 import java.awt.image._
+
+import scodec.codecs._
+import scodec.stream._
+import cats.implicits._
+import scodec.interop.cats._
 /**
   
 TODO:
@@ -34,15 +40,15 @@ Memory:
 - we want to draw by specifying a buffer offset (not yet)
  
   * */
-object Step01 {
+object Step03 {
 
   val FENCE_TIMEOUT  = 100000000
   val width = 500
   val height = 500
   val textureWidth = 1024//900
   val textureHeight = 512//1201
-  val cubeTextureWidth = 8
-  val cubeTextureHeight = 8
+  val cubeTextureWidth = 1024
+  val cubeTextureHeight = 1024
   val scale = 0.25f
 
   val glfw = new GLFW()
@@ -50,12 +56,34 @@ object Step01 {
 
   val name = "skybox01"
   val skyboxFile = "skybox.png"
+  val terrainFile = "terrain.model"
+  val terrainTextureFile = "terrain-texture.png"
+
+
+  case class Component(size: Int, num: Int)
+  case class Header(components: List[Component])
+
+  //sucessfully decoded vertex data
+  //now need to integrate it with the rest of the system
+  def decodeFile(): (List[Component], List[Buffer[Byte]]) = {
+    val perComponent = (uint32L ~ uint32L).map{case (n, s) => 
+      Component(n.toInt, s.toInt)}.contramap((c: Component) => (c.num, c.size)).fuse
+
+    val vertexData = for {
+      nComponents <- uint32L
+      components <- listOfN(provide(nComponents.toInt), perComponent) // repeat this
+      bufs <- components.traverse(c => bytes(c.size.toInt * c.num.toInt).asDecoder.map(b => Buffer.direct[Byte](b.toArray:_*)))
+    } yield (components, bufs)
+    val decoder: StreamDecoder[(List[Component], List[Buffer[Byte]])] = decode.once(vertexData)
+    val fileStream: InputStream = getClass.getResourceAsStream(s"/$terrainFile")
+    decoder.decodeInputStream(fileStream).runLog.unsafeRun().head
+  }
 
   //need to compare image types to supported types
   //need to stage images, and set sample swizzles from input type
   //ultimately want to read ETC compressed images too
-  def skyboxTexture(): ByteBuffer = {
-    val file = new File(getClass.getResource(s"/$skyboxFile").toURI())
+  def loadTexture(name: String): ByteBuffer = {
+    val file = new File(getClass.getResource(s"/$name").toURI())
     val img = ImageIO.read(file)
     val width = img.getWidth
     val height = img.getHeight
@@ -108,7 +136,10 @@ object Step01 {
 
 
   def main(args: Array[String]): Unit = {
-    //skyboxTexture().array
+    val (comps, datas) = decodeFile()
+    //position, normal, uv
+    val terrainVertexBytes = datas.head.value
+    val terrainPolygonBytes = datas(1).value
     glfw.init()
     val instance = vk.createInstance(new Vulkan.InstanceCreateInfo(
       applicationInfo = new Vulkan.ApplicationInfo(
@@ -310,7 +341,7 @@ object Step01 {
           Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)))
     vk.bindImageMemory(device, textureImage, textureMemory, new Vulkan.DeviceSize(0))
 
-    val textureData = skyboxTexture()  //lunarg.tutorial.Cube.textureData(textureWidth, textureHeight, 0)
+    val textureData = loadTexture(skyboxFile)  //lunarg.tutorial.Cube.textureData(textureWidth, textureHeight, 0)
     //val textureData = lunarg.tutorial.Cube.textureData(textureWidth, textureHeight, 0)
     val textureDataPtr = vk.mapMemory(device, textureMemory, new Vulkan.DeviceSize(0), textureImageMemoryRequirements.size, 0)
     vk.loadMemory(textureDataPtr, textureData)
@@ -337,6 +368,8 @@ object Step01 {
 
     val cubeTextureFormatProperties = vk.getPhysicalDeviceFormatProperties(physicalDevice, Vulkan.FORMAT_R8G8B8A8_UNORM)
     if(!(Vulkan.FORMAT_FEATURE_SAMPLED_IMAGE_BIT & cubeTextureFormatProperties.linearTilingFeatures)) throw new Error("image needs staging!")
+    //TODO: add in the terrain texture here
+
     val cubeTextureImage = vk.createImage(device, new Vulkan.ImageCreateInfo(
       flags = 0,
       imageType = Vulkan.IMAGE_TYPE_2D, 
@@ -354,7 +387,7 @@ object Step01 {
           Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)))
     vk.bindImageMemory(device, cubeTextureImage, cubeTextureMemory, new Vulkan.DeviceSize(0))
 
-    val cubeTextureData = lunarg.tutorial.Cube.textureData(cubeTextureWidth, cubeTextureHeight, 0)
+    val cubeTextureData = loadTexture(terrainTextureFile)  // lunarg.tutorial.Cube.textureData(cubeTextureWidth, cubeTextureHeight, 0)
     val cubeTextureDataPtr = vk.mapMemory(device, cubeTextureMemory, new Vulkan.DeviceSize(0), cubeTextureImageMemoryRequirements.size, 0)
     vk.loadMemory(cubeTextureDataPtr, cubeTextureData)
     vk.unmapMemory(device, cubeTextureMemory)
@@ -365,10 +398,10 @@ object Step01 {
       viewType = Vulkan.IMAGE_VIEW_TYPE_2D,
       format = Vulkan.FORMAT_R8G8B8A8_UNORM,
       components = new Vulkan.ComponentMapping(
-        Vulkan.COMPONENT_SWIZZLE_R,
-        Vulkan.COMPONENT_SWIZZLE_G,
+        Vulkan.COMPONENT_SWIZZLE_A,
         Vulkan.COMPONENT_SWIZZLE_B,
-        Vulkan.COMPONENT_SWIZZLE_A
+        Vulkan.COMPONENT_SWIZZLE_G,
+        Vulkan.COMPONENT_SWIZZLE_R
       ),
       subresourceRange = new Vulkan.ImageSubresourceRange(
       aspectMask = Vulkan.IMAGE_ASPECT_COLOR_BIT,
@@ -490,7 +523,7 @@ object Step01 {
       -1f, -1f, -1f, 1f, 1f, -1f,
        1f, -1f, -1f, 1f, 1f,  1f).value
 
-    val cubeVertexData = hephaestus.lunarg.tutorial.Cube.solidFaceUvsData
+    val cubeVertexData = terrainVertexBytes
 
     val vertexBuffer = vk.createBuffer(device, new Vulkan.BufferCreateInfo(
       usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -512,6 +545,24 @@ object Step01 {
     vk.bindBufferMemory(device, vertexBuffer, vertexBufferMemory, new Vulkan.DeviceSize(0))
 
 
+    val elementData = terrainPolygonBytes
+    val elementBuffer = vk.createBuffer(device, new Vulkan.BufferCreateInfo(
+      usage = Vulkan.BUFFER_USAGE_INDEX_BUFFER_BIT,
+      size = new Vulkan.DeviceSize(elementData.capacity),
+      queueFamilyIndices = Array.empty[Int],
+      sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
+      flags = 0))
+
+    val elementBufferMemoryRequirements = vk.getBufferMemoryRequirements(device, elementBuffer)
+    val elementBufferMemoryTypeIndex = memoryTypeIndex(memoryProperties, elementBufferMemoryRequirements,
+      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    val elementBufferMemory = vk.allocateMemory(device, new Vulkan.MemoryAllocateInfo(
+      allocationSize = elementBufferMemoryRequirements.size,
+      memoryTypeIndex = elementBufferMemoryTypeIndex))
+    val elementDataPtr = vk.mapMemory(device, elementBufferMemory, new Vulkan.DeviceSize(0), elementBufferMemoryRequirements.size, 0) 
+    vk.loadMemory(elementDataPtr, elementData)
+    vk.unmapMemory(device, elementBufferMemory)
+    vk.bindBufferMemory(device, elementBuffer, elementBufferMemory, new Vulkan.DeviceSize(0))
 
     val renderPass = vk.createRenderPass(device, new Vulkan.RenderPassCreateInfo(
       flags = 0,
@@ -549,7 +600,7 @@ object Step01 {
     val fragmentModule = initShaderModule("skybox.frag.spv", device)
 
 
-    val cubeVertexModule = initShaderModule("texture.vert.spv", device)
+    val cubeVertexModule = initShaderModule("terrain.vert.spv", device)
     val cubeFragmentModule = initShaderModule("texture.frag.spv", device)
 
     val framebuffers = imageViews.map { v =>
@@ -690,18 +741,18 @@ object Step01 {
       vertexBindingDescriptions = Array(new Vulkan.VertexInputBindingDescription(
         binding = 0,
         inputRate = Vulkan.VERTEX_INPUT_RATE_VERTEX,
-        stride = 24)),
+        stride = 32)),
       vertexAttributeDescriptions = Array(
         new Vulkan.VertexInputAttributeDescription(
           binding = 0,
           location = 0,
-          format = Vulkan.FORMAT_R32G32B32A32_SFLOAT,
+          format = Vulkan.FORMAT_R32G32B32_SFLOAT,
           offset = 0
         ), new Vulkan.VertexInputAttributeDescription(
           binding = 0,
           location = 1,
           format = Vulkan.FORMAT_R32G32_SFLOAT,
-          offset = 16
+          offset = 24
         )))
     val cubeRasterizationStateCreateInfo = new Vulkan.PipelineRasterizationStateCreateInfo(
       flags = 0,
@@ -750,6 +801,8 @@ object Step01 {
     vk.cmdBindDescriptorSets(secondaryCommandBuffer, Vulkan.PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
       0, 1, Array(descriptorSets(0)), 0, Array.empty)
     vk.cmdBindVertexBuffers(secondaryCommandBuffer, 0, 1, Array(vertexBuffer), Array(new Vulkan.DeviceSize(0)))
+    vk.cmdBindIndexBuffer(secondaryCommandBuffer, elementBuffer, new Vulkan.DeviceSize(0), Vulkan.INDEX_TYPE_UINT32)
+      
     vk.cmdSetViewport(secondaryCommandBuffer, 0, 1, Array(new Vulkan.Viewport(
       height = height,
       width = width,
@@ -767,7 +820,7 @@ object Step01 {
     vk.cmdBindPipeline(secondaryCommandBuffer, Vulkan.PIPELINE_BIND_POINT_GRAPHICS, pipelines(1))
     vk.cmdBindDescriptorSets(secondaryCommandBuffer, Vulkan.PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
       0, 1, Array(descriptorSets(1)), 0, Array.empty)
-    vk.cmdDraw(secondaryCommandBuffer, 12 * 3, 1, 0, 0)
+    vk.cmdDrawIndexed(secondaryCommandBuffer, comps(1).num * 3, 1, 0, 0, 0)
 
     vk.endCommandBuffer(secondaryCommandBuffer)
 
@@ -785,8 +838,8 @@ object Step01 {
       vk.loadMemory(uniformDataPtr, uniformDataPerFrame)
       val cubeUniformDataPerFrame = hephaestus.lunarg.tutorial.Cube.uniformData(width, height, i)
       vk.loadMemory(cubeUniformDataPtr, cubeUniformDataPerFrame)
-      val textureDataPerFrame = hephaestus.lunarg.tutorial.Cube.textureData(cubeTextureWidth, cubeTextureHeight, i)
-       vk.loadMemory(cubeTextureDataPtr, textureDataPerFrame)
+      // val textureDataPerFrame = hephaestus.lunarg.tutorial.Cube.textureData(cubeTextureWidth, cubeTextureHeight, i)
+      //  vk.loadMemory(cubeTextureDataPtr, textureDataPerFrame)
 
       val currentBuffer = vk.acquireNextImageKHR(device, swapchain, java.lang.Long.MAX_VALUE, acquireSemaphore, new Vulkan.Fence(0))
       vk.beginCommandBuffer(primaryCommandBuffer, new Vulkan.CommandBufferBeginInfo(flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,

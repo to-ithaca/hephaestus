@@ -1574,6 +1574,11 @@ JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdBindVertexBuffers
   vkCmdBindVertexBuffers((VkCommandBuffer) cmd_buffer, first, count, v_buffers, v_offsets);
 }
 
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdBindIndexBuffer
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong cmd_buffer, jlong buffer, jlong offset, jint index_type) {
+  vkCmdBindIndexBuffer((VkCommandBuffer) cmd_buffer, (VkBuffer) buffer, offset, index_type);
+}
+
 JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdEndRenderPass
 (JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong buf) {
   vkCmdEndRenderPass((VkCommandBuffer) buf);
@@ -2211,6 +2216,10 @@ JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdDraw
   vkCmdDraw((VkCommandBuffer) buffer, vertex_count, instance_count, first_vertex, first_instance);
 }
 
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdDrawIndexed
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong buffer, jint index_count, jint instance_count, jint first_index, jint vertex_offset, jint first_instance) {
+  vkCmdDrawIndexed((VkCommandBuffer) buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
+}
 
 VkSwapchainKHR toSwapchainKHR(JNIEnv* env, jobject o) {
   jclass cls = (*env)->GetObjectClass(env, o);
