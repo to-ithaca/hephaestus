@@ -7,12 +7,13 @@ lazy val buildSettings = Seq(
   organization := "com.ithaca",
   scalaOrganization := "org.typelevel",
   scalaVersion := "2.12.0",
-  name         := "hephaestus",
-  version      := "0.1.0-SNAPSHOT"
+  name := "hephaestus",
+  version := "0.1.0-SNAPSHOT"
 )
 
 lazy val commonScalacOptions = Seq(
-  "-encoding", "UTF-8",
+  "-encoding",
+  "UTF-8",
   "-language:existentials",
   "-language:higherKinds",
   "-language:implicitConversions",
@@ -23,30 +24,34 @@ lazy val commonScalacOptions = Seq(
 )
 
 lazy val commonResolvers = Seq(
-    Resolver.sonatypeRepo("releases"),
-    Resolver.sonatypeRepo("snapshots"),
-    Resolver.jcenterRepo
+  Resolver.sonatypeRepo("releases"),
+  Resolver.sonatypeRepo("snapshots"),
+  Resolver.jcenterRepo
 )
 
 lazy val commonSettings = Seq(
-  resolvers := commonResolvers,
-  scalacOptions ++= commonScalacOptions,
-  libraryDependencies ++= Seq(
-    "com.hackoeur" % "jglm" % "1.0.0",
-    "org.typelevel" %% "cats-core" % "0.9.0",
-    "org.scodec" %% "scodec-stream" % "1.0.1",
-    "org.scodec" %% "scodec-cats" % "0.2.0",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-  )
+    resolvers := commonResolvers,
+    scalacOptions ++= commonScalacOptions,
+    libraryDependencies ++= Seq(
+      "com.hackoeur" % "jglm" % "1.0.0",
+      "org.typelevel" %% "cats-core" % "0.9.0",
+      "org.scodec" %% "scodec-stream" % "1.0.1",
+      "org.scodec" %% "scodec-cats" % "0.2.0",
+      "org.spire-math" %% "spire" % "0.13.0",
+      "com.github.julien-truffaut" %% "monocle-core" % "1.4.0",
+      "com.github.julien-truffaut" %% "monocle-macro" % "1.4.0",
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    ),
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 ) ++ coverageSettings ++ buildSettings
-
 
 lazy val core = (project in file("core"))
   .settings(
     moduleName := "hephaestus-core",
     commonSettings,
     target in javah := (target in LocalProject("native")).value / "include"
-).dependsOn(native % Runtime)
+  )
+  .dependsOn(native % Runtime)
 
 lazy val native = (project in file("native"))
   .enablePlugins(JniNative)
@@ -55,18 +60,22 @@ lazy val native = (project in file("native"))
     buildSettings,
     sourceDirectory in nativeCompile := baseDirectory.value,
     compile in Compile := {
-      Def.sequential(
-        javah in LocalProject("core"),
-        nativeCompile
-      ).value
+      Def
+        .sequential(
+          javah in LocalProject("core"),
+          nativeCompile
+        )
+        .value
       (compile in Compile).value
     }
-)
+  )
 
 lazy val samples = (project in file("samples"))
   .settings(
     moduleName := "hephaestus-samples",
-    buildSettings
-).dependsOn(core, native)
+    buildSettings,
+    commonSettings
+  )
+  .dependsOn(core, native)
 
 lazy val root = (project in file(".")).aggregate(core, native, samples)

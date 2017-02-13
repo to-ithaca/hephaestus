@@ -23,21 +23,31 @@ object Step09 extends Utils {
     val commandBuffer = initCommandBuffer(device, commandPool)
 
     val swapchainFormat = initSwapchainFormat(surface, physicalDevice)
-    val surfaceCapabilities = vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
+    val surfaceCapabilities =
+      vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
     val swapchainExtent = initSwapchainExtent(surfaceCapabilities)
-    val swapchain = initSwapchain(surface, physicalDevice, device, swapchainFormat, swapchainExtent, surfaceCapabilities)
+    val swapchain = initSwapchain(surface,
+                                  physicalDevice,
+                                  device,
+                                  swapchainFormat,
+                                  swapchainExtent,
+                                  surfaceCapabilities)
 
     val swapchainImages = vk.getSwapchainImages(device, swapchain)
     val imageViews = initImageViews(device, swapchain, swapchainFormat)
     val depthImage = initDepthImage(physicalDevice, device, swapchainExtent)
 
     val memoryProperties = vk.getPhysicalDeviceMemoryProperties(physicalDevice)
-    val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
+    val depthImageMemory = initDepthImageMemory(physicalDevice,
+                                                device,
+                                                depthImage,
+                                                memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
     val uniformData = Cube.uniformData(width, height)
     val buffer = initBuffer(device, uniformData.capacity)
-    val bufferMemory = initBufferMemory(device, memoryProperties, buffer, uniformData)
+    val bufferMemory =
+      initBufferMemory(device, memoryProperties, buffer, uniformData)
 
     val descriptorSetLayout = initDescriptorSetLayout(device)
     val pipelineLayout = initPipelineLayout(device, descriptorSetLayout)
@@ -51,17 +61,19 @@ object Step09 extends Utils {
       maxSets = 1,
       poolSizes = Array(descriptorPoolSize)
     )
-    val descriptorPool = vk.createDescriptorPool(device, descriptorPoolCreateInfo)
+    val descriptorPool =
+      vk.createDescriptorPool(device, descriptorPoolCreateInfo)
     val descriptorSetAllocateInfo = new Vulkan.DescriptorSetAllocateInfo(
       descriptorPool = descriptorPool,
       setLayouts = Array(descriptorSetLayout)
     )
 
-    val descriptorSets = vk.allocateDescriptorSets(device, descriptorSetAllocateInfo)
+    val descriptorSets =
+      vk.allocateDescriptorSets(device, descriptorSetAllocateInfo)
     val bufferInfo = new Vulkan.DescriptorBufferInfo(
       buffer = buffer,
-      offset = new Vulkan.DeviceSize(0),
-      range = new Vulkan.DeviceSize(uniformData.capacity)
+      offset = 0L,
+      range = uniformData.capacity
     )
     val writeDescriptorSet = new Vulkan.WriteDescriptorSet(
       dstSet = descriptorSets(0),
@@ -74,7 +86,11 @@ object Step09 extends Utils {
       texelBufferView = Array.empty[Vulkan.BufferView]
     )
 
-    vk.updateDescriptorSets(device, 1, Array(writeDescriptorSet), 0, Array.empty[Vulkan.CopyDescriptorSet])
+    vk.updateDescriptorSets(device,
+                            1,
+                            Array(writeDescriptorSet),
+                            0,
+                            Array.empty[Vulkan.CopyDescriptorSet])
 
     vk.freeDescriptorSets(device, descriptorPool, 1, descriptorSets)
     vk.destroyDescriptorPool(device, descriptorPool)
@@ -88,7 +104,9 @@ object Step09 extends Utils {
     vk.destroyImageView(device, depthImageView)
     vk.freeMemory(device, depthImageMemory)
     vk.destroyImage(device, depthImage)
-    imageViews.foreach { i => vk.destroyImageView(device, i)}
+    imageViews.foreach { i =>
+      vk.destroyImageView(device, i)
+    }
     vk.destroySwapchain(device, swapchain)
     vk.freeCommandBuffers(device, commandPool, 1, commandBuffer)
     vk.destroyCommandPool(device, commandPool)

@@ -6,44 +6,26 @@ import hephaestus.io.Buffer
 
 import java.nio.{ByteBuffer, ByteOrder}
 import java.io.File
+import java.io.InputStream
 import java.nio.file.Files
 
 import javax.imageio._
 import java.awt.image._
 
-/**
+import scodec.codecs._
+import scodec.stream._
+import cats.implicits._
+import scodec.interop.cats._
 
-TODO:
-1. Draw a plane at the back of the screen, behind everything else DONE
-2. Using an angle theta, in a cylindrical coordinate system, work out the uv coords for each vertex
- - the v coord is fixed, the x coord is dependent on theta DONE
-3. Using an angle theta, and an angle phi, in a spherical coordinate system, work out the uv coords for each vertex
-4. Draw a cube in front of this, rotating theta and phi
-
-1. Read in a texture for the texture data
-  Bitmap bitmap = BitmapFactory.decodeFile(filePath);
-
-Ideas:
- - could have a Reader for device / physical device / command buffer
- - could have a ResourceTracker State for cleanups
- - image loading (staging etc?)
- -
-
-Memory:
-- we want to allocate a big block for all data
-- we want to split the block up into individual buffers
-- we want to draw by specifying a buffer offset (not yet)
-
-  * */
-object Step01 {
+object Step05 {
 
   val FENCE_TIMEOUT = 100000000
   val width = 500
   val height = 500
   val textureWidth = 1024 //900
   val textureHeight = 512 //1201
-  val cubeTextureWidth = 8
-  val cubeTextureHeight = 8
+  val cubeTextureWidth = 1024
+  val cubeTextureHeight = 1024
   val scale = 0.25f
 
   val glfw = new GLFW()
@@ -51,12 +33,41 @@ object Step01 {
 
   val name = "skybox01"
   val skyboxFile = "skybox.png"
+  val terrainFile = "terrain.model"
+  val terrainTextureFile = "terrain-texture.png"
+
+  case class Component(size: Int, num: Int)
+  case class Header(components: List[Component])
+
+  //sucessfully decoded vertex data
+  //now need to integrate it with the rest of the system
+  def decodeFile(): (List[Component], List[Buffer[Byte]]) = {
+    val perComponent = (uint32L ~ uint32L)
+      .map {
+        case (n, s) =>
+          Component(n.toInt, s.toInt)
+      }
+      .contramap((c: Component) => (c.num, c.size))
+      .fuse
+
+    val vertexData = for {
+      nComponents <- uint32L
+      components <- listOfN(provide(nComponents.toInt), perComponent) // repeat this
+      bufs <- components.traverse(c =>
+        bytes(c.size.toInt * c.num.toInt).asDecoder.map(b =>
+          Buffer.direct[Byte](b.toArray: _*)))
+    } yield (components, bufs)
+    val decoder: StreamDecoder[(List[Component], List[Buffer[Byte]])] =
+      decode.once(vertexData)
+    val fileStream: InputStream =
+      getClass.getResourceAsStream(s"/$terrainFile")
+    decoder.decodeInputStream(fileStream).runLog.unsafeRun().head
+  }
 
   //need to compare image types to supported types
   //need to stage images, and set sample swizzles from input type
-  //ultimately want to read ETC compressed images too
-  def skyboxTexture(): ByteBuffer = {
-    val file = new File(getClass.getResource(s"/$skyboxFile").toURI())
+  def loadTexture(name: String): ByteBuffer = {
+    val file = new File(getClass.getResource(s"/$name").toURI())
     val img = ImageIO.read(file)
     val width = img.getWidth
     val height = img.getHeight
@@ -122,7 +133,13 @@ object Step01 {
   }
 
   def main(args: Array[String]): Unit = {
-    //skyboxTexture().array
+    val vertexData =
+      Buffer.direct(-1f, -1f, -1f, 1f, 1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f).value
+    val (comps, datas) = decodeFile()
+    //position, normal, uv
+    val terrainVertexBytes = datas.head.value
+    val terrainPolygonBytes = datas(1).value
+
     glfw.init()
     val instance = vk.createInstance(
       new Vulkan.InstanceCreateInfo(
@@ -144,23 +161,43 @@ object Step01 {
     val window = glfw.createWindow(width, height, name)
     val surface = glfw.createWindowSurface(instance, window)
 
-    val physicalDevice = vk.enumeratePhysicalDevices(instance)(0)
+    val hPhysicalDevice = hephaestus.vulkan.PhysicalDevice(instance, vk)
+    val physicalDevice = hPhysicalDevice.device
+
     val qi = initGraphicsPresentQueueFamilyIndex(instance, physicalDevice)
-    val device = vk.createDevice(
-      physicalDevice,
+    val hDevice = hephaestus.vulkan.PhysicalDevice.createDevice(
       new Vulkan.DeviceCreateInfo(
         queueCreateInfos = Array(
           new Vulkan.DeviceQueueCreateInfo(flags = 0,
                                            queueFamilyIndex = qi,
-                                           queuePriorities = Array(0f))),
+                                           queuePriorities = Array(0f, 0f))),
         enabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME)
-      )
-    )
+      )).run(hPhysicalDevice)
+    val device = hDevice.device
+
+    //we can now allocate memory
+    val allocator = hephaestus.vulkan.Suballocator(hDevice)
+    //we need to create the loading queue here
+    val loadQueue = vk.getDeviceQueue(device, qi, 1)
+    val loadSemaphore = hephaestus.vulkan.Device.createSemaphore(new Vulkan.SemaphoreCreateInfo(flags = 0)).run(hDevice)
 
     val commandPool = vk.createCommandPool(
       device,
       new Vulkan.CommandPoolCreateInfo(flags = Vulkan.COMMAND_POOL_BLANK_FLAG,
                                        queueFamilyIndex = qi))
+    val loadCommandBuffer = hephaestus.vulkan.CommandBuffer(vk.allocateCommandBuffers(
+      device,
+      new Vulkan.CommandBufferAllocateInfo(
+        commandPool = commandPool,
+        level = Vulkan.COMMAND_BUFFER_LEVEL_PRIMARY,
+        commandBufferCount = 1)), vk)
+    //now we have enough to create a memory manager
+    val loadFence = vk.createFence(device, new Vulkan.FenceCreateInfo(flags = 0))
+    val manager = hephaestus.vulkan.ResourceManager.from(hDevice, allocator, loadQueue, loadSemaphore, loadCommandBuffer, loadFence)
+    println(s"manager is $manager")
+    //we want to allocate memory on the memory manager
+
+
     val primaryCommandBuffer = vk.allocateCommandBuffers(
       device,
       new Vulkan.CommandBufferAllocateInfo(
@@ -246,62 +283,57 @@ object Step01 {
         )
       )
     }
-    val formatProperties = vk.getPhysicalDeviceFormatProperties(
-      physicalDevice,
-      Vulkan.FORMAT_D16_UNORM)
-    val imageTiling =
-      if (Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT & formatProperties.linearTilingFeatures)
-        Vulkan.IMAGE_TILING_LINEAR
-      else if (Vulkan.FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT & formatProperties.optimalTilingFeatures)
-        Vulkan.IMAGE_TILING_OPTIMAL
-      else throw new Error("depth not supported")
-    val depthImage = vk.createImage(
-      device,
-      new Vulkan.ImageCreateInfo(
-        flags = 0,
-        imageType = Vulkan.IMAGE_TYPE_2D,
-        format = Vulkan.FORMAT_D16_UNORM,
-        extent = new Vulkan.Extent3D(width = swapchainExtent.width,
-                                     height = swapchainExtent.height,
-                                     depth = 1),
-        mipLevels = 1,
-        arrayLayers = 1,
-        samples = Vulkan.SAMPLE_COUNT_1_BIT,
-        tiling = imageTiling,
-        initialLayout = Vulkan.IMAGE_LAYOUT_UNDEFINED,
-        usage = Vulkan.IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        queueFamilyIndices = Array.empty,
-        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE
-      )
+
+
+    val uniformData = Buffer.direct(scale, 0f).value
+    val cubeUniformData =
+      hephaestus.lunarg.tutorial.Cube.uniformData(width, height, 0)
+
+
+    val textureData = loadTexture(skyboxFile)
+    val hTextureImageInfo = hephaestus.vulkan.ImageInfo(
+      format = Vulkan.FORMAT_R8G8B8A8_UNORM,
+      usage = Vulkan.IMAGE_USAGE_SAMPLED_BIT | Vulkan.IMAGE_USAGE_TRANSFER_DST_BIT,
+      layout = Vulkan.IMAGE_LAYOUT_PREINITIALIZED,
+      width = textureWidth,
+      height = textureHeight)
+
+    val cubeTextureData = loadTexture(terrainTextureFile) // lunarg.tutorial.Cube.textureData(cubeTextureWidth, cubeTextureHeight, 0)
+    val hCubeTextureImageInfo = hephaestus.vulkan.ImageInfo(
+      format = Vulkan.FORMAT_R8G8B8A8_UNORM,
+      usage = Vulkan.IMAGE_USAGE_SAMPLED_BIT,
+      layout = Vulkan.IMAGE_LAYOUT_PREINITIALIZED,
+      width = cubeTextureWidth,
+      height = cubeTextureHeight)
+    val hDepthImageInfo = hephaestus.vulkan.ImageInfo(
+      format = Vulkan.FORMAT_D16_UNORM,
+      usage = Vulkan.IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      layout = Vulkan.IMAGE_LAYOUT_UNDEFINED,
+      width = swapchainExtent.width,
+      height = swapchainExtent.height
     )
+    //fudge this for now, since we know that the alignment is 256 bytes for this device
+    val (manager0, (skySlice, groundSlice, groundVertexSlice, skyVertexSlice, groundElementSlice, skyTextureSlice, groundTextureSlice, depthSlice)) = ((for {
+      skySlice <- hephaestus.vulkan.ResourceManager.loadHost(uniformData, Some(256))
+      groundSlice <- hephaestus.vulkan.ResourceManager.loadHost(cubeUniformData, Some(256))
+      groundVertexSlice <- hephaestus.vulkan.ResourceManager.loadLocal(terrainVertexBytes, None)
+      skyVertexSlice <- hephaestus.vulkan.ResourceManager.loadLocal(vertexData, None)
+      groundElementSlice <- hephaestus.vulkan.ResourceManager.loadLocal(terrainPolygonBytes, None)
+      skyTextureSlice <- hephaestus.vulkan.ResourceManager.loadImage(textureData, hTextureImageInfo)
+      groundTextureSlice <- hephaestus.vulkan.ResourceManager.loadImage(cubeTextureData, hCubeTextureImageInfo)
+      depthSlice <- hephaestus.vulkan.ResourceManager.loadEmptyImage(hDepthImageInfo)
+    } yield (skySlice, groundSlice, groundVertexSlice, skyVertexSlice, groundElementSlice, skyTextureSlice, groundTextureSlice, depthSlice)).run(manager) match {
+      case Left(err) => sys.error(err.toString)
+      case Right(a) => a
+    })
 
-    val memoryProperties = vk.getPhysicalDeviceMemoryProperties(physicalDevice)
-    val depthImageMemoryRequirements =
-      vk.getImageMemoryRequirements(device, depthImage)
-    val depthImageMemoryTypeIndex = memoryProperties.memoryTypes.zipWithIndex
-      .foldLeft(
-        (Option.empty[Int], depthImageMemoryRequirements.memoryTypeBits)) {
-        (t0, t1) =>
-          (t0, t1) match {
-            case ((None, bits), (tpe, i)) =>
-              if ((bits & 1) == 1) (Some(i), bits) else (None, bits >> 1)
-            case (prev, _) => prev
-          }
-      }
-      ._1
-      .get
+    // val (manager1, loadSemaphoreOpt) = hephaestus.vulkan.ResourceManager.submit.run(manager0).value
 
-    val depthImageMemory = vk.allocateMemory(
-      device,
-      new Vulkan.MemoryAllocateInfo(
-        allocationSize = depthImageMemoryRequirements.size,
-        memoryTypeIndex = depthImageMemoryTypeIndex))
-    vk.bindImageMemory(device, depthImage, depthImageMemory, 0L)
     val depthImageView = vk.createImageView(
       device,
       new Vulkan.ImageViewCreateInfo(
         flags = 0,
-        image = depthImage,
+        image = depthSlice.image.image,
         viewType = Vulkan.IMAGE_VIEW_TYPE_2D,
         format = Vulkan.FORMAT_D16_UNORM,
         components = new Vulkan.ComponentMapping(
@@ -315,129 +347,17 @@ object Step01 {
                                              Vulkan.IMAGE_ASPECT_DEPTH_BIT,
                                            baseMipLevel = 0,
                                            levelCount = 1,
-                                           baseArrayLayer = 0,
+                                           baseArrayLayer = depthSlice.layer,
                                            layerCount = 1)
       )
     )
 
-    val uniformData = Buffer.direct(scale, 0f).value
-    val cubeUniformData =
-      hephaestus.lunarg.tutorial.Cube.uniformData(width, height, 0)
-
-    val uniformBuffer = vk.createBuffer(
-      device,
-      new Vulkan.BufferCreateInfo(
-        usage = Vulkan.BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        size = uniformData.capacity,
-        queueFamilyIndices = Array.empty[Int],
-        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-        flags = 0
-      )
-    )
-    val uniformBufferMemoryRequirements =
-      vk.getBufferMemoryRequirements(device, uniformBuffer)
-    val uniformBufferMemoryTypeIndex = memoryTypeIndex(
-      memoryProperties,
-      uniformBufferMemoryRequirements,
-      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
-    val uniformBufferMemory = vk.allocateMemory(
-      device,
-      new Vulkan.MemoryAllocateInfo(allocationSize =
-                                      uniformBufferMemoryRequirements.size,
-                                    memoryTypeIndex =
-                                      uniformBufferMemoryTypeIndex))
-    val uniformDataPtr = vk.mapMemory(device,
-                                      uniformBufferMemory,
-                                      0,
-                                      uniformBufferMemoryRequirements.size,
-                                      0)
-    vk.loadMemory(uniformDataPtr, uniformData)
-    vk.unmapMemory(device, uniformBufferMemory)
-    vk.bindBufferMemory(device, uniformBuffer, uniformBufferMemory, 0)
-
-    val cubeUniformBuffer = vk.createBuffer(
-      device,
-      new Vulkan.BufferCreateInfo(
-        usage = Vulkan.BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        size = cubeUniformData.capacity,
-        queueFamilyIndices = Array.empty[Int],
-        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-        flags = 0
-      )
-    )
-    val cubeUniformBufferMemoryRequirements =
-      vk.getBufferMemoryRequirements(device, cubeUniformBuffer)
-    val cubeUniformBufferMemoryTypeIndex = memoryTypeIndex(
-      memoryProperties,
-      cubeUniformBufferMemoryRequirements,
-      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
-    val cubeUniformBufferMemory = vk.allocateMemory(
-      device,
-      new Vulkan.MemoryAllocateInfo(allocationSize =
-                                      cubeUniformBufferMemoryRequirements.size,
-                                    memoryTypeIndex =
-                                      cubeUniformBufferMemoryTypeIndex))
-    val cubeUniformDataPtr = vk.mapMemory(
-      device,
-      cubeUniformBufferMemory,
-      0,
-      cubeUniformBufferMemoryRequirements.size,
-      0)
-    vk.loadMemory(cubeUniformDataPtr, cubeUniformData)
-    vk.unmapMemory(device, cubeUniformBufferMemory)
-    vk.bindBufferMemory(device, cubeUniformBuffer, cubeUniformBufferMemory, 0)
-
-    val textureFormatProperties = vk.getPhysicalDeviceFormatProperties(
-      physicalDevice,
-      Vulkan.FORMAT_R8G8B8A8_UNORM)
-    if (!(Vulkan.FORMAT_FEATURE_SAMPLED_IMAGE_BIT & textureFormatProperties.linearTilingFeatures))
-      throw new Error("image needs staging!")
-    val textureImage = vk.createImage(
-      device,
-      new Vulkan.ImageCreateInfo(
-        flags = 0,
-        imageType = Vulkan.IMAGE_TYPE_2D,
-        format = Vulkan.FORMAT_R8G8B8A8_UNORM,
-        extent = new Vulkan.Extent3D(textureWidth, textureHeight, 1),
-        mipLevels = 1,
-        arrayLayers = 1,
-        samples = 1,
-        tiling = Vulkan.IMAGE_TILING_LINEAR,
-        usage = Vulkan.IMAGE_USAGE_SAMPLED_BIT,
-        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-        queueFamilyIndices = Array.empty,
-        initialLayout = Vulkan.IMAGE_LAYOUT_PREINITIALIZED
-      )
-    )
-    val textureImageMemoryRequirements =
-      vk.getImageMemoryRequirements(device, textureImage)
-    val textureMemory = vk.allocateMemory(
-      device,
-      new Vulkan.MemoryAllocateInfo(
-        allocationSize = textureImageMemoryRequirements.size,
-        memoryTypeIndex = memoryTypeIndex(
-          memoryProperties,
-          textureImageMemoryRequirements,
-          Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
-      )
-    )
-    vk.bindImageMemory(device, textureImage, textureMemory, 0)
-
-    val textureData = skyboxTexture() //lunarg.tutorial.Cube.textureData(textureWidth, textureHeight, 0)
-    //val textureData = lunarg.tutorial.Cube.textureData(textureWidth, textureHeight, 0)
-    val textureDataPtr = vk.mapMemory(device,
-                                      textureMemory,
-                                      0,
-                                      textureImageMemoryRequirements.size,
-                                      0)
-    vk.loadMemory(textureDataPtr, textureData)
-    vk.unmapMemory(device, textureMemory)
 
     val textureImageView = vk.createImageView(
       device,
       new Vulkan.ImageViewCreateInfo(
         flags = 0,
-        image = textureImage,
+        image = skyTextureSlice.image.image,
         viewType = Vulkan.IMAGE_VIEW_TYPE_2D,
         format = Vulkan.FORMAT_R8G8B8A8_UNORM,
         components = new Vulkan.ComponentMapping(
@@ -451,77 +371,31 @@ object Step01 {
                                              Vulkan.IMAGE_ASPECT_COLOR_BIT,
                                            baseMipLevel = 0,
                                            levelCount = 1,
-                                           baseArrayLayer = 0,
+                                           baseArrayLayer = skyTextureSlice.layer,
                                            layerCount = 1)
       )
     )
 
-    val cubeTextureFormatProperties = vk.getPhysicalDeviceFormatProperties(
-      physicalDevice,
-      Vulkan.FORMAT_R8G8B8A8_UNORM)
-    if (!(Vulkan.FORMAT_FEATURE_SAMPLED_IMAGE_BIT & cubeTextureFormatProperties.linearTilingFeatures))
-      throw new Error("image needs staging!")
-    val cubeTextureImage = vk.createImage(
-      device,
-      new Vulkan.ImageCreateInfo(
-        flags = 0,
-        imageType = Vulkan.IMAGE_TYPE_2D,
-        format = Vulkan.FORMAT_R8G8B8A8_UNORM,
-        extent = new Vulkan.Extent3D(cubeTextureWidth, cubeTextureHeight, 1),
-        mipLevels = 1,
-        arrayLayers = 1,
-        samples = 1,
-        tiling = Vulkan.IMAGE_TILING_LINEAR,
-        usage = Vulkan.IMAGE_USAGE_SAMPLED_BIT,
-        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-        queueFamilyIndices = Array.empty,
-        initialLayout = Vulkan.IMAGE_LAYOUT_PREINITIALIZED
-      )
-    )
-    val cubeTextureImageMemoryRequirements =
-      vk.getImageMemoryRequirements(device, cubeTextureImage)
-    val cubeTextureMemory = vk.allocateMemory(
-      device,
-      new Vulkan.MemoryAllocateInfo(
-        allocationSize = cubeTextureImageMemoryRequirements.size,
-        memoryTypeIndex = memoryTypeIndex(
-          memoryProperties,
-          cubeTextureImageMemoryRequirements,
-          Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
-      )
-    )
-    vk.bindImageMemory(device, cubeTextureImage, cubeTextureMemory, 0)
-
-    val cubeTextureData =
-      lunarg.tutorial.Cube.textureData(cubeTextureWidth, cubeTextureHeight, 0)
-    val cubeTextureDataPtr = vk.mapMemory(
-      device,
-      cubeTextureMemory,
-      0,
-      cubeTextureImageMemoryRequirements.size,
-      0)
-    vk.loadMemory(cubeTextureDataPtr, cubeTextureData)
-    vk.unmapMemory(device, cubeTextureMemory)
 
     val cubeTextureImageView = vk.createImageView(
       device,
       new Vulkan.ImageViewCreateInfo(
         flags = 0,
-        image = cubeTextureImage,
+        image = groundTextureSlice.image.image,
         viewType = Vulkan.IMAGE_VIEW_TYPE_2D,
         format = Vulkan.FORMAT_R8G8B8A8_UNORM,
         components = new Vulkan.ComponentMapping(
-          Vulkan.COMPONENT_SWIZZLE_R,
-          Vulkan.COMPONENT_SWIZZLE_G,
+          Vulkan.COMPONENT_SWIZZLE_A,
           Vulkan.COMPONENT_SWIZZLE_B,
-          Vulkan.COMPONENT_SWIZZLE_A
+          Vulkan.COMPONENT_SWIZZLE_G,
+          Vulkan.COMPONENT_SWIZZLE_R
         ),
         subresourceRange =
           new Vulkan.ImageSubresourceRange(aspectMask =
                                              Vulkan.IMAGE_ASPECT_COLOR_BIT,
                                            baseMipLevel = 0,
                                            levelCount = 1,
-                                           baseArrayLayer = 0,
+                                           baseArrayLayer = groundTextureSlice.layer,
                                            layerCount = 1)
       )
     )
@@ -601,6 +475,7 @@ object Step01 {
         setLayouts = Array(descriptorSetLayout, descriptorSetLayout)))
 
     //this could be dynamic
+    //have forgotten why we couldn't use the same uniform buffer in the first place
     val writeDescriptorSets = Array(
       new Vulkan.WriteDescriptorSet(
         dstSet = descriptorSets(0),
@@ -610,9 +485,9 @@ object Step01 {
         descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         imageInfo = Array.empty[Vulkan.DescriptorImageInfo],
         bufferInfo = Array(
-          new Vulkan.DescriptorBufferInfo(buffer = uniformBuffer,
-                                          offset = 0,
-                                          range = uniformData.capacity)),
+          new Vulkan.DescriptorBufferInfo(buffer = skySlice.buffer.buffer,
+                                          offset = skySlice.slot.lower,
+                                          range = skySlice.slot.upper - skySlice.slot.lower)),
         texelBufferView = Array.empty[Vulkan.BufferView]
       ),
       new Vulkan.WriteDescriptorSet(
@@ -637,9 +512,9 @@ object Step01 {
         descriptorType = Vulkan.DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         imageInfo = Array.empty[Vulkan.DescriptorImageInfo],
         bufferInfo = Array(
-          new Vulkan.DescriptorBufferInfo(buffer = cubeUniformBuffer,
-                                          offset = 0,
-                                          range = cubeUniformData.capacity)),
+          new Vulkan.DescriptorBufferInfo(buffer = groundSlice.buffer.buffer,
+                                          offset = groundSlice.slot.lower,
+                                          range = groundSlice.slot.upper - groundSlice.slot.lower)),
         texelBufferView = Array.empty[Vulkan.BufferView]
       ),
       new Vulkan.WriteDescriptorSet(
@@ -663,44 +538,6 @@ object Step01 {
                             writeDescriptorSets,
                             0,
                             Array.empty[Vulkan.CopyDescriptorSet])
-
-    val vertexData =
-      Buffer.direct(-1f, -1f, -1f, 1f, 1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f).value
-
-    val cubeVertexData = hephaestus.lunarg.tutorial.Cube.solidFaceUvsData
-
-    val vertexBuffer = vk.createBuffer(
-      device,
-      new Vulkan.BufferCreateInfo(
-        usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        size = vertexData.capacity + cubeVertexData.capacity,
-        queueFamilyIndices = Array.empty[Int],
-        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-        flags = 0
-      )
-    )
-
-    val vertexBufferMemoryRequirements =
-      vk.getBufferMemoryRequirements(device, vertexBuffer)
-    val vertexBufferMemoryTypeIndex = memoryTypeIndex(
-      memoryProperties,
-      vertexBufferMemoryRequirements,
-      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
-    val vertexBufferMemory = vk.allocateMemory(
-      device,
-      new Vulkan.MemoryAllocateInfo(allocationSize =
-                                      vertexBufferMemoryRequirements.size,
-                                    memoryTypeIndex =
-                                      vertexBufferMemoryTypeIndex))
-    val vertexDataPtr = vk.mapMemory(device,
-                                     vertexBufferMemory,
-                                     0,
-                                     vertexBufferMemoryRequirements.size,
-                                     0)
-    vk.loadMemory(vertexDataPtr, vertexData)
-    vk.loadMemory(vertexDataPtr + vertexData.capacity, cubeVertexData)
-    vk.unmapMemory(device, vertexBufferMemory)
-    vk.bindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0)
 
     val renderPass = vk.createRenderPass(
       device,
@@ -752,7 +589,7 @@ object Step01 {
     val vertexModule = initShaderModule("skybox.vert.spv", device)
     val fragmentModule = initShaderModule("skybox.frag.spv", device)
 
-    val cubeVertexModule = initShaderModule("texture.vert.spv", device)
+    val cubeVertexModule = initShaderModule("terrain.vert.spv", device)
     val cubeFragmentModule = initShaderModule("texture.frag.spv", device)
 
     val framebuffers = imageViews.map { v =>
@@ -912,19 +749,19 @@ object Step01 {
           new Vulkan.VertexInputBindingDescription(
             binding = 0,
             inputRate = Vulkan.VERTEX_INPUT_RATE_VERTEX,
-            stride = 24)),
+            stride = 32)),
         vertexAttributeDescriptions = Array(
           new Vulkan.VertexInputAttributeDescription(
             binding = 0,
             location = 0,
-            format = Vulkan.FORMAT_R32G32B32A32_SFLOAT,
+            format = Vulkan.FORMAT_R32G32B32_SFLOAT,
             offset = 0
           ),
           new Vulkan.VertexInputAttributeDescription(
             binding = 0,
             location = 1,
             format = Vulkan.FORMAT_R32G32_SFLOAT,
-            offset = 16
+            offset = 24
           )
         )
       )
@@ -988,11 +825,19 @@ object Step01 {
                              Array(descriptorSets(0)),
                              0,
                              Array.empty)
+    //we need to bind this twice, because the format of the data is different.  If not, we would just bind it once and set the offset in the draw
+
+    //TODO: bind device local buffer here
     vk.cmdBindVertexBuffers(secondaryCommandBuffer,
                             0,
                             1,
-                            Array(vertexBuffer),
-                            Array(0))
+                            Array(skyVertexSlice.buffer.buffer),
+                            Array(skyVertexSlice.slot.lower))
+    vk.cmdBindIndexBuffer(secondaryCommandBuffer,
+                          groundElementSlice.buffer.buffer,
+                          groundElementSlice.slot.lower,
+                          Vulkan.INDEX_TYPE_UINT32)
+
     vk.cmdSetViewport(secondaryCommandBuffer,
                       0,
                       1,
@@ -1014,11 +859,12 @@ object Step01 {
         )))
     vk.cmdDraw(secondaryCommandBuffer, 6, 1, 0, 0)
 
+    println(s"binding ground vertex buffer")
     vk.cmdBindVertexBuffers(secondaryCommandBuffer,
                             0,
                             1,
-                            Array(vertexBuffer),
-                            Array(vertexData.capacity))
+                            Array(groundVertexSlice.buffer.buffer),
+                            Array(groundVertexSlice.slot.lower))
     vk.cmdBindPipeline(secondaryCommandBuffer,
                        Vulkan.PIPELINE_BIND_POINT_GRAPHICS,
                        pipelines(1))
@@ -1030,7 +876,7 @@ object Step01 {
                              Array(descriptorSets(1)),
                              0,
                              Array.empty)
-    vk.cmdDraw(secondaryCommandBuffer, 12 * 3, 1, 0, 0)
+    vk.cmdDrawIndexed(secondaryCommandBuffer, comps(1).num * 3, 1, 0, 0, 0)
 
     vk.endCommandBuffer(secondaryCommandBuffer)
 
@@ -1041,17 +887,15 @@ object Step01 {
     val fence = vk.createFence(device, new Vulkan.FenceCreateInfo(flags = 0))
     val graphicsQueue = vk.getDeviceQueue(device, qi, 0)
 
-    (0 until 5000).foreach { i =>
+    val finalM = (0 until 500).foldLeft(manager0) { (m, i) =>
       val theta = (i % 5000).toDouble / 5000.0
       val uniformDataPerFrame = Buffer.direct(scale, theta.toFloat).value
-      //since memory is coherent, we just need to do a memcopy
-      vk.loadMemory(uniformDataPtr, uniformDataPerFrame)
       val cubeUniformDataPerFrame =
         hephaestus.lunarg.tutorial.Cube.uniformData(width, height, i)
-      vk.loadMemory(cubeUniformDataPtr, cubeUniformDataPerFrame)
-      val textureDataPerFrame = hephaestus.lunarg.tutorial.Cube
-        .textureData(cubeTextureWidth, cubeTextureHeight, i)
-      vk.loadMemory(cubeTextureDataPtr, textureDataPerFrame)
+      val (nextM, loadSemaphoreOpt) = (
+        hephaestus.vulkan.ResourceManager.reloadHost(uniformDataPerFrame, skySlice) >>
+        hephaestus.vulkan.ResourceManager.reloadHost(cubeUniformDataPerFrame, groundSlice) >>
+        hephaestus.vulkan.ResourceManager.submit).run(m).value
 
       val currentBuffer = vk.acquireNextImageKHR(device,
                                                  swapchain,
@@ -1096,7 +940,7 @@ object Step01 {
         1,
         Array(
           new Vulkan.SubmitInfo(
-            waitSemaphores = Array(acquireSemaphore),
+            waitSemaphores = Array(acquireSemaphore) ++ loadSemaphoreOpt.map(a => Array(a)).getOrElse(Array.empty),
             waitDstStageMask =
               Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
             commandBuffers = Array(primaryCommandBuffer),
@@ -1123,10 +967,13 @@ object Step01 {
         }
       }
       vk.resetFences(device, 1, Array(fence))
+      nextM
     }
 
     Thread.sleep(1000)
 
+    hephaestus.vulkan.ResourceManager.free.run(finalM).value
+    hephaestus.vulkan.Suballocator.free.run(allocator).value
     vk.destroySemaphore(device, renderSemaphore)
     vk.destroySemaphore(device, acquireSemaphore)
     vk.destroyFence(device, fence)
@@ -1138,26 +985,14 @@ object Step01 {
     vk.destroyShaderModule(device, vertexModule)
     vk.destroyShaderModule(device, fragmentModule)
     vk.destroyRenderPass(device, renderPass)
-    vk.destroyBuffer(device, vertexBuffer)
-    vk.freeMemory(device, vertexBufferMemory)
     vk.freeDescriptorSets(device, descriptorPool, 1, descriptorSets)
     vk.destroyDescriptorPool(device, descriptorPool)
     vk.destroyPipelineLayout(device, pipelineLayout)
     vk.destroyDescriptorSetLayout(device, descriptorSetLayout)
     vk.destroySampler(device, textureSampler)
     vk.destroyImageView(device, textureImageView)
-    vk.freeMemory(device, textureMemory)
-    vk.destroyImage(device, textureImage)
     vk.destroyImageView(device, cubeTextureImageView)
-    vk.freeMemory(device, cubeTextureMemory)
-    vk.destroyImage(device, cubeTextureImage)
-    vk.destroyBuffer(device, cubeUniformBuffer)
-    vk.freeMemory(device, cubeUniformBufferMemory)
-    vk.destroyBuffer(device, uniformBuffer)
-    vk.freeMemory(device, uniformBufferMemory)
     vk.destroyImageView(device, depthImageView)
-    vk.freeMemory(device, depthImageMemory)
-    vk.destroyImage(device, depthImage)
     imageViews.foreach { i =>
       vk.destroyImageView(device, i)
     }
@@ -1172,3 +1007,114 @@ object Step01 {
     glfw.terminate()
   }
 }
+/**
+
+I would like:
+ - resource management, so I don't have to clean everything up all the time
+ - a clear idea of what the API is like in terms of structures derived from other structures
+ - a cleraer idea of the memory management (we now have two objects in the same vertex buffer)
+ - cleaner file loading.  We've got a codec, which is good
+ - a better vector and camera system
+ - I should be able to calculate the part of the skybox I need from the camera system
+ -
+
+Can create a pipeline without knowing anything about the data, except for format
+So don't need to know data size.
+
+    val uniformBuffer = createBuffer
+    val uniformBufferMemoryRequirements = vk.getBufferMemoryRequirements(device, uniformBuffer)
+  //find the index of the memory type which can be used to store the buffer, given the properties and buffer requirements
+    val uniformBufferMemoryTypeIndex = memoryTypeIndex(memoryProperties, uniformBufferMemoryRequirements, props)
+  //allocate memory for a memory type
+    val uniformBufferMemory = vk.allocateMemory ...
+  //map and copy an amount of memory
+    val uniformDataPtr = vk.mapMemory(device, uniformBufferMemory, new Vulkan.DeviceSize(0), uniformBufferMemoryRequirements.size, 0)
+    vk.loadMemory(uniformDataPtr, uniformData)
+    vk.unmapMemory(device, uniformBufferMemory)
+  //bind the memory to a buffer
+    vk.bindBufferMemory(device, uniformBuffer, uniformBufferMemory, new Vulkan.DeviceSize(0))
+
+
+  Ideally, we'd allocate a chunk of memory for a memory type
+  We'd then find that the memory type was valid, and take a range for a buffer
+  We'd load stuff in and bind that range to a buffer
+
+When we use the buffer, we have to specify an offset.  This offset must be valid.  So the data bound to the buffer memory must be ok.
+
+A single heap can support multiple types
+So how do we pick a heap?  It seems to be chosen for us.  The type has the heap index in it!
+e.g.
+propertyFlags 0 heap 1
+propertyFlags 0 heap 1
+propertyFlags 0 heap 1
+propertyFlags 0 heap 1
+propertyFlags 0 heap 1
+propertyFlags 0 heap 1
+propertyFlags 0 heap 1
+propertyFlags 1 heap 0 //device local
+propertyFlags 1 heap 0 //device local
+propertyFlags 6 heap 1 //host visible and coherent
+propertyFlags 14 heap 1 // host visible and coherent and cached
+heap size  2147483648 flags 1 //device local
+heap size 25197714432 flags 0 //device local
+
+ => This has a dedicated graphics card.  We need to copy to put into the device local memory
+
+message: vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x1a with error: Write update to descriptor in set 0x1a binding #0 failed with error message: Attempted write update to buffer descriptor failed due to: VkDescriptorBufferInfo range is 64 which is greater than buffer size (64) minus requested offset of 8. For more information refer to Vulkan Spec Section '13.2.4. Descriptor Set Updates' which states 'If range is not equal to VK_WHOLE_SIZE, range must be less than or equal to the size of buffer minus offset' (https://www.khronos.org/registry/vulkan/specs/1.0-extensions/xhtml/vkspec.html#VkDescriptorBufferInfo)
+
+
+message: vkUpdateDescriptorSets(): pDescriptorWrites[2].pBufferInfo[0].offset (0x8) must be a multiple of device limit minUniformBufferOffsetAlignment 0x100
+
+Vulkan
+®
+1.0.39 - A Specification
+575 / 683
+Valid Usage
+•  If any member of this structure is
+VK_FALSE
+, as returned by
+vkGetPhysicalDeviceFeatures
+, then it
+must be
+VK_FALSE
+when passed as part of the
+VkDeviceCreateInfo
+struct when creating a device
+30.1.1    Feature Requirements
+All Vulkan graphics implementations must support the following features:
+•
+robustBufferAccess
+.
+All other features are not required by the Specification.
+30.2    Limits
+There are a variety of implementation-dependent limits.
+The
+VkPhysicalDeviceLimits
+are properties of the physical device. These are available in the
+limits
+member of
+the
+VkPhysicalDeviceProperties
+structure which is returned from
+vkGetPhysicalDeviceProperties
+
+Design plan:
+ - assume that there can be separate queues for loading and drawing in the same queue family.
+   => we sync the queues using a semaphore when we want to use updated data
+ - memory can be categorized as:
+    no-updates, long term (should be device local)
+    updates, long term (should be host visible, not device local)
+    per-frame updates (using vkCmdUpdatebuffer, host visible)
+ - give a size hint for a given memory type on application start
+ - for a given buffer, get memoryTypeBits, find appropriate allocation, bind allocation
+ - for a given set of vertex attributes, find a vertex buffer
+ - for a given set of uniforms, find a uniform buffer
+ - buffer quantities:
+   - there should be a single index buffer
+   - there should be a vertex buffer per attribute set (assuming interleaving here)
+   - there should be a vertex buffer per instanced attribute set
+   - there should be a single uniform buffer (no point in having multiple uniform buffers)
+
+What about buffer views?
+
+  */

@@ -23,37 +23,51 @@ object Step07 extends Utils {
     val commandBuffer = initCommandBuffer(device, commandPool)
 
     val swapchainFormat = initSwapchainFormat(surface, physicalDevice)
-    val surfaceCapabilities = vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
+    val surfaceCapabilities =
+      vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
     val swapchainExtent = initSwapchainExtent(surfaceCapabilities)
-    val swapchain = initSwapchain(surface, physicalDevice, device, swapchainFormat, swapchainExtent, surfaceCapabilities)
+    val swapchain = initSwapchain(surface,
+                                  physicalDevice,
+                                  device,
+                                  swapchainFormat,
+                                  swapchainExtent,
+                                  surfaceCapabilities)
 
     val swapchainImages = vk.getSwapchainImages(device, swapchain)
     val imageViews = initImageViews(device, swapchain, swapchainFormat)
     val depthImage = initDepthImage(physicalDevice, device, swapchainExtent)
 
     val memoryProperties = vk.getPhysicalDeviceMemoryProperties(physicalDevice)
-    val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
+    val depthImageMemory = initDepthImageMemory(physicalDevice,
+                                                device,
+                                                depthImage,
+                                                memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
     val uniformData = Cube.uniformData(width, height)
     val bufferCreateInfo = new Vulkan.BufferCreateInfo(
       usage = Vulkan.BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-      size = new Vulkan.DeviceSize(uniformData.capacity),
+      size = uniformData.capacity,
       queueFamilyIndices = Array.empty[Int],
       sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
-      flags = 0)
+      flags = 0
+    )
     val buffer = vk.createBuffer(device, bufferCreateInfo)
-    val bufferMemoryRequirements = vk.getBufferMemoryRequirements(device, buffer)
-    val bufferMemoryTypeIndex = memoryTypeIndex(memoryProperties, bufferMemoryRequirements,
+    val bufferMemoryRequirements =
+      vk.getBufferMemoryRequirements(device, buffer)
+    val bufferMemoryTypeIndex = memoryTypeIndex(
+      memoryProperties,
+      bufferMemoryRequirements,
       Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
     val bufferMemoryAllocationInfo = new Vulkan.MemoryAllocateInfo(
       allocationSize = bufferMemoryRequirements.size,
       memoryTypeIndex = bufferMemoryTypeIndex)
     val bufferMemory = vk.allocateMemory(device, bufferMemoryAllocationInfo)
-    val dataPtr = vk.mapMemory(device, bufferMemory, new Vulkan.DeviceSize(0), bufferMemoryRequirements.size, 0) 
+    val dataPtr =
+      vk.mapMemory(device, bufferMemory, 0L, bufferMemoryRequirements.size, 0)
     vk.loadMemory(dataPtr, uniformData)
     vk.unmapMemory(device, bufferMemory)
-    vk.bindBufferMemory(device, buffer, bufferMemory, new Vulkan.DeviceSize(0))
+    vk.bindBufferMemory(device, buffer, bufferMemory, 0L)
 
     vk.destroyBuffer(device, buffer)
     vk.freeMemory(device, bufferMemory)
@@ -61,7 +75,9 @@ object Step07 extends Utils {
     vk.destroyImageView(device, depthImageView)
     vk.freeMemory(device, depthImageMemory)
     vk.destroyImage(device, depthImage)
-    imageViews.foreach { i => vk.destroyImageView(device, i)}
+    imageViews.foreach { i =>
+      vk.destroyImageView(device, i)
+    }
     vk.destroySwapchain(device, swapchain)
     vk.freeCommandBuffers(device, commandPool, 1, commandBuffer)
     vk.destroyCommandPool(device, commandPool)

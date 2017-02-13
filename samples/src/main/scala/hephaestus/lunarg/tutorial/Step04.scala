@@ -20,7 +20,8 @@ object Step04 extends Utils {
       commandPool = commandPool,
       level = Vulkan.COMMAND_BUFFER_LEVEL_PRIMARY,
       commandBufferCount = 1)
-    val commandBuffer = vk.allocateCommandBuffers(device, commandBufferAllocateInfo)
+    val commandBuffer =
+      vk.allocateCommandBuffers(device, commandBufferAllocateInfo)
 
     vk.freeCommandBuffers(device, commandPool, 1, commandBuffer)
     vk.destroyCommandPool(device, commandPool)
