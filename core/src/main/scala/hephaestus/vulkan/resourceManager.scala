@@ -19,6 +19,42 @@ import hephaestus.platform.Vulkan.{
 import java.nio.ByteBuffer
 
 
+
+case class Buffer(buffer: VkBuffer, memory: DeviceMemory, slot: Bounded[Long], slots: List[Bounded[Long]])
+object Buffer {
+  val _slots: Lens[Buffer, List[Bounded[Long]]] = GenLens[Buffer](_.slots)
+}
+//TODO: type this
+case class BufferGroup(buffers: List[Buffer], flags: List[Int], size: Long, usage: Int)
+object BufferGroup {
+  val _buffers: Lens[BufferGroup, List[Buffer]] = GenLens[BufferGroup](_.buffers)
+  val _size: Lens[BufferGroup, Long] = GenLens[BufferGroup](_.size)
+}
+
+case class ImageInfo(format: VkFormat, usage: VkImageUsage, layout: VkImageLayout, width: Int, height: Int)
+case class Image(image: VkImage, reqs: VkMemoryRequirements, info: ImageInfo, layers: Int, available: List[Int], memory: DeviceMemory)
+object Image {
+  val _available: Lens[Image, List[Int]] = GenLens[Image](_.available)
+}
+
+/** Manages buffers and images.  There should be a single resource manager per device.
+  * 
+  * @param device the device used
+  * @param allocator the allocator used
+  * @param queue the dedicated queue for resource loading.
+  * @param semaphore the dedicated semaphore used to indicate when resources have loaded.
+  * @param cmd the dedicated command buffer for resource loading.
+  * @param fence the dedicated fence used to indicate when resources have loaded.
+  * @param host the buffer group for host accessible memory
+  * @param local the buffer group for device accessible memory
+  * @param stage the buffer group for host accessible staging area
+  * @param imageFlags the flags used to create a device local image
+  * @param images a list of currently loaded images
+  * @param loads a list of load operations to be executed on submit
+  * @param copies a list of buffer copy operations to be executed on submit
+  * @param imageCopies a list of image copy operations to be executed on submit
+  * @param pending a list of staged resources that the device is currently copying.  The fence indicates when these have been copied.
+  */
 case class ResourceManager(
   device: Device,
   allocator: Suballocator, 
@@ -32,28 +68,6 @@ case class ResourceManager(
   loads: List[ResourceManager.LoadOp], copies: List[ResourceManager.CopyOp], imageCopies: List[ResourceManager.ImageCopyOp],
   pending: List[ResourceManager.Slot]
 )
-
-case class Buffer(buffer: VkBuffer, memory: DeviceMemory, slot: Bounded[Long], slots: List[Bounded[Long]])
-object Buffer {
-  val _slots: Lens[Buffer, List[Bounded[Long]]] = GenLens[Buffer](_.slots)
-}
-//TODO: type this
-case class BufferGroup(buffers: List[Buffer], flags: List[Int], size: Long, usage: Int)
-object BufferGroup {
-  val _buffers: Lens[BufferGroup, List[Buffer]] = GenLens[BufferGroup](_.buffers)
-  val _size: Lens[BufferGroup, Long] = GenLens[BufferGroup](_.size)
-}
-sealed trait Purpose
-case object Local extends Purpose
-case object Host extends Purpose
-
-
-case class ImageInfo(format: VkFormat, usage: VkImageUsage, layout: VkImageLayout, width: Int, height: Int)
-case class Image(image: VkImage, reqs: VkMemoryRequirements, info: ImageInfo, layers: Int, available: List[Int], memory: DeviceMemory)
-object Image {
-  val _available: Lens[Image, List[Int]] = GenLens[Image](_.available)
-}
-
 object ResourceManager {
 
   case class Slot(buffer: Buffer, slot: Bounded[Long])
@@ -297,7 +311,6 @@ object ResourceManager {
         val buf = ops.head.slot.buffer
         val ptr = Device.mapMemory(buf.memory.memory, buf.slot).run(d)
         ops.foreach{ o =>
-          println(s"loading data with slot ${o.slot.slot} capacity ${o.data.capacity}")
           d.vk.loadMemory(ptr + o.slot.slot.lower, o.data)
         }
     }
