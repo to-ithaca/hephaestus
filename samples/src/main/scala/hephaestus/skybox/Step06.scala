@@ -1,8 +1,12 @@
+
 package hephaestus
 package skybox
 
 import hephaestus.platform._
 import hephaestus.io.Buffer
+
+import com.hackoeur.jglm._
+import com.hackoeur.jglm.support._
 
 import java.nio.{ByteBuffer, ByteOrder}
 import java.io.File
@@ -17,8 +21,8 @@ import scodec.stream._
 import cats.implicits._
 import scodec.interop.cats._
 
-/** uses hephaestus resource manager to allocate memory and resources */
-object Step05 {
+/** reads camera modelview and projection matrix from a file */
+object Step06 {
 
   val FENCE_TIMEOUT = 100000000
   val width = 500
@@ -34,6 +38,7 @@ object Step05 {
 
   val name = "skybox01"
   val skyboxFile = "skybox.png"
+  val cameraFile = "skybox.cam"
   val terrainFile = "terrain.model"
   val terrainTextureFile = "terrain-texture.png"
 
@@ -62,6 +67,13 @@ object Step05 {
       decode.once(vertexData)
     val fileStream: InputStream =
       getClass.getResourceAsStream(s"/$terrainFile")
+    decoder.decodeInputStream(fileStream).runLog.unsafeRun().head
+  }
+
+  val cameraData: List[Float] = {
+    val decoder = decode.once(listOfN(provide(32), floatL))
+    val fileStream: InputStream =
+      getClass.getResourceAsStream(s"/$cameraFile")
     decoder.decodeInputStream(fileStream).runLog.unsafeRun().head
   }
 
@@ -131,6 +143,51 @@ object Step05 {
       code = spv
     )
     vk.createShaderModule(device, info)
+  }
+
+
+  def toMat(a: List[Float]): Mat4 =
+    new Mat4(
+      a(0), a(1), a(2), a(3),
+      a(4), a(5), a(6), a(7), 
+      a(8), a(9), a(10), a(11), 
+      a(12), a(13), a(14), a(15))
+
+
+  val cam = cameraData
+  def cameraUniformData(width: Int, height: Int, frame: Int): ByteBuffer = {
+    // val angle = (frame % 1000).toDouble / 1000.0
+    // val radius = math.sqrt(1.34*1.34 + 4.75*4.75)
+    // val eyeX = radius * math.cos(angle * math.Pi)
+    // val eyeY = radius * math.sin(angle * math.Pi)
+
+    // val aspect = if (width > height) height.toFloat / width.toFloat else 1f
+    // val focalLength = 35.0 //mm
+    // val sensor = 30.0 //mm
+    // val fov = math.atan(sensor / (2.0 * focalLength)) / math.Pi * 360.0
+    // //val fov = aspect * 49.0f / 4f
+    // val projection = Matrices.perspective(fov.toFloat, width.toFloat / height.toFloat, 0.1f, 100.0f)
+    // val view = Matrices.lookAt(new Vec3(eyeX.toFloat, eyeY.toFloat, 1.73f),
+    //                            new Vec3(0f, 0f, 0f),
+    //                            new Vec3(0f, 0f, 1f))
+    // val model = Mat4.MAT4_IDENTITY
+    val modelView = toMat(cam.take(16)).transpose
+    val projection = toMat(cam.drop(16)).transpose
+    println(modelView)
+    println(projection)
+    val clip = new Mat4(
+      1.0f, 0.0f, 0.0f, 0.0f,
+      0.0f, -1.0f, 0.0f, 0.0f, 
+      0.0f, 0.0f, 0.5f, 0.5f, 
+      0.0f, 0.0f, 0.0f, 1.0f).transpose
+    val mvp = clip.multiply(projection).multiply(modelView)
+
+
+
+    val fbuf = mvp.getBuffer()
+    val fs = new Array[Float](fbuf.capacity())
+    fbuf.get(fs)
+    Buffer.direct(fs: _*).value
   }
 
   def main(args: Array[String]): Unit = {
@@ -287,8 +344,7 @@ object Step05 {
 
 
     val uniformData = Buffer.direct(scale, 0f).value
-    val cubeUniformData =
-      hephaestus.lunarg.tutorial.Cube.uniformData(width, height, 0)
+    val cubeUniformData = cameraUniformData(width, height, 0)
 
 
     val textureData = loadTexture(skyboxFile)
@@ -327,8 +383,6 @@ object Step05 {
       case Left(err) => sys.error(err.toString)
       case Right(a) => a
     })
-
-    // val (manager1, loadSemaphoreOpt) = hephaestus.vulkan.ResourceManager.submit.run(manager0).value
 
     val depthImageView = vk.createImageView(
       device,
@@ -646,7 +700,7 @@ object Step05 {
       new Vulkan.PipelineRasterizationStateCreateInfo(
         flags = 0,
         polygonMode = Vulkan.POLYGON_MODE_FILL,
-        cullMode = Vulkan.CULL_MODE_BACK_BIT,
+        cullMode = Vulkan.CULL_MODE_NONE,
         frontFace = Vulkan.FRONT_FACE_COUNTER_CLOCKWISE,
         depthClampEnable = true,
         rasterizerDiscardEnable = false,
@@ -770,7 +824,7 @@ object Step05 {
       new Vulkan.PipelineRasterizationStateCreateInfo(
         flags = 0,
         polygonMode = Vulkan.POLYGON_MODE_FILL,
-        cullMode = Vulkan.CULL_MODE_BACK_BIT,
+        cullMode = Vulkan.CULL_MODE_NONE,
         frontFace = Vulkan.FRONT_FACE_CLOCKWISE,
         depthClampEnable = true,
         rasterizerDiscardEnable = false,
@@ -888,11 +942,10 @@ object Step05 {
     val fence = vk.createFence(device, new Vulkan.FenceCreateInfo(flags = 0))
     val graphicsQueue = vk.getDeviceQueue(device, qi, 0)
 
-    val finalM = (0 until 500).foldLeft(manager0) { (m, i) =>
+    val finalM = (0 until 5000).foldLeft(manager0) { (m, i) =>
       val theta = (i % 5000).toDouble / 5000.0
       val uniformDataPerFrame = Buffer.direct(scale, theta.toFloat).value
-      val cubeUniformDataPerFrame =
-        hephaestus.lunarg.tutorial.Cube.uniformData(width, height, i)
+      val cubeUniformDataPerFrame = cameraUniformData(width, height, i)
       val (nextM, loadSemaphoreOpt) = (
         hephaestus.vulkan.ResourceManager.reloadHost(uniformDataPerFrame, skySlice) >>
         hephaestus.vulkan.ResourceManager.reloadHost(cubeUniformDataPerFrame, groundSlice) >>

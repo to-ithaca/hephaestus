@@ -852,6 +852,7 @@ object Vulkan {
   val POLYGON_MODE_FILL = new PolygonMode(0)
 
   val CULL_MODE_BACK_BIT: Int = 0x00000002
+  val CULL_MODE_NONE = 0
 
   final class FrontFace(val value: Int) extends AnyVal
   val FRONT_FACE_COUNTER_CLOCKWISE = new FrontFace(0)
