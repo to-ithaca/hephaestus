@@ -5,8 +5,8 @@ package tutorial
 import hephaestus.platform._
 import java.nio._
 
-/** Draws a coloured cube */
-object Step15 extends Utils {
+/** Draws a coloured cube using a staging buffer */
+object Step19 extends Utils {
 
   def main(args: Array[String]): Unit = {
     glfw.init()
@@ -83,9 +83,70 @@ object Step15 extends Utils {
                                         height)
 
     val vertexData: ByteBuffer = Cube.solidFaceColorsData
-    val vertexBuffer = initVertexBuffer(device, vertexData.capacity)
+
+    val vertexBuffer = vk.createBuffer(
+      device,
+      new Vulkan.BufferCreateInfo(
+        usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT | Vulkan.BUFFER_USAGE_TRANSFER_SRC_BIT,
+        size = vertexData.capacity,
+        queueFamilyIndices = Array.empty[Int],
+        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
+        flags = 0
+      )
+    )
+    val vertexBufferMemoryRequirements =
+      vk.getBufferMemoryRequirements(device, vertexBuffer)
+    val vertexBufferMemoryTypeIndex = memoryTypeIndex(
+      memoryProperties,
+      vertexBufferMemoryRequirements,
+      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    val vertexBufferMemoryAllocationInfo = new Vulkan.MemoryAllocateInfo(
+      allocationSize = vertexBufferMemoryRequirements.size,
+      memoryTypeIndex = vertexBufferMemoryTypeIndex)
     val vertexBufferMemory =
-      initBufferMemory(device, memoryProperties, vertexBuffer, vertexData)
+      vk.allocateMemory(device, vertexBufferMemoryAllocationInfo)
+    val vertexDataPtr = vk.mapMemory(device,
+                                     vertexBufferMemory,
+                                     0L,
+                                     vertexBufferMemoryRequirements.size,
+                                     0)
+    vk.loadMemory(vertexDataPtr, vertexData)
+    vk.unmapMemory(device, vertexBufferMemory)
+    vk.bindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0L)
+
+    val deviceLocalVertexBuffer = vk.createBuffer(
+      device,
+      new Vulkan.BufferCreateInfo(
+        usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT | Vulkan.BUFFER_USAGE_TRANSFER_DST_BIT,
+        size = vertexData.capacity,
+        queueFamilyIndices = Array.empty[Int],
+        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
+        flags = 0
+      )
+    )
+    val deviceLocalVertexBufferMemoryRequirements =
+      vk.getBufferMemoryRequirements(device, deviceLocalVertexBuffer)
+    val deviceLocalVertexBufferMemoryTypeIndex = memoryTypeIndex(
+      memoryProperties,
+      deviceLocalVertexBufferMemoryRequirements,
+      Vulkan.MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    val deviceLocalVertexBufferMemoryAllocationInfo =
+      new Vulkan.MemoryAllocateInfo(
+        allocationSize = deviceLocalVertexBufferMemoryRequirements.size,
+        memoryTypeIndex = deviceLocalVertexBufferMemoryTypeIndex)
+    val deviceLocalVertexBufferMemory =
+      vk.allocateMemory(device, deviceLocalVertexBufferMemoryAllocationInfo)
+    vk.bindBufferMemory(device,
+                        deviceLocalVertexBuffer,
+                        deviceLocalVertexBufferMemory,
+                        0L)
+    vk.cmdCopyBuffer(commandBuffer,
+                     vertexBuffer,
+                     deviceLocalVertexBuffer,
+                     Array(
+                       new Vulkan.BufferCopy(srcOffset = 0L,
+                                             dstOffset = 0L,
+                                             size = vertexData.capacity)))
 
     val pipeline = initPipeline(device,
                                 renderPass,
@@ -105,6 +166,28 @@ object Step15 extends Utils {
                                                java.lang.Long.MAX_VALUE,
                                                semaphore,
                                                new Vulkan.Fence(0))
+
+    //we need to sync the buffer here
+
+    vk.cmdPipelineBarrier(
+      commandBuffer,
+      new Vulkan.PipelineStageFlag(0),
+      new Vulkan.PipelineStageFlag(0),
+      0,
+      Array.empty,
+      Array(
+        new Vulkan.BufferMemoryBarrier(
+          srcAccessMask = new Vulkan.AccessFlag(0),
+          dstAccessMask = new Vulkan.AccessFlag(0),
+          srcQueueFamilyIndex = qi,
+          dstQueueFamilyIndex = qi,
+          buffer = deviceLocalVertexBuffer,
+          offset = 0L,
+          size = vertexData.capacity
+        )
+      ),
+      Array.empty
+    )
     beginRenderPass(commandBuffer,
                     renderPass,
                     currentBuffer,
@@ -128,7 +211,7 @@ object Step15 extends Utils {
     vk.cmdBindVertexBuffers(commandBuffer,
                             0,
                             1,
-                            Array(vertexBuffer),
+                            Array(deviceLocalVertexBuffer),
                             Array(0L))
     val viewport = new Vulkan.Viewport(height = height,
                                        width = width,
@@ -169,6 +252,8 @@ object Step15 extends Utils {
 
     vk.destroyPipeline(device, pipeline)
 
+    vk.destroyBuffer(device, deviceLocalVertexBuffer)
+    vk.freeMemory(device, deviceLocalVertexBufferMemory)
     vk.destroyBuffer(device, vertexBuffer)
     vk.freeMemory(device, vertexBufferMemory)
 

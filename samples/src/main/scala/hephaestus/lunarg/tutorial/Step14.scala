@@ -26,46 +26,71 @@ object Step14 extends Utils {
     val commandBuffer = initCommandBuffer(device, commandPool)
 
     val swapchainFormat = initSwapchainFormat(surface, physicalDevice)
-    val surfaceCapabilities = vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
+    val surfaceCapabilities =
+      vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
     val swapchainExtent = initSwapchainExtent(surfaceCapabilities)
-    val swapchain = initSwapchain(surface, physicalDevice, device, swapchainFormat, swapchainExtent, surfaceCapabilities)
+    val swapchain = initSwapchain(surface,
+                                  physicalDevice,
+                                  device,
+                                  swapchainFormat,
+                                  swapchainExtent,
+                                  surfaceCapabilities)
 
     val swapchainImages = vk.getSwapchainImages(device, swapchain)
     val imageViews = initImageViews(device, swapchain, swapchainFormat)
     val depthImage = initDepthImage(physicalDevice, device, swapchainExtent)
 
     val memoryProperties = vk.getPhysicalDeviceMemoryProperties(physicalDevice)
-    val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
+    val depthImageMemory = initDepthImageMemory(physicalDevice,
+                                                device,
+                                                depthImage,
+                                                memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
     val uniformData = Cube.uniformData(width, height)
     val buffer = initBuffer(device, uniformData.capacity)
-    val bufferMemory = initBufferMemory(device, memoryProperties, buffer, uniformData)
+    val bufferMemory =
+      initBufferMemory(device, memoryProperties, buffer, uniformData)
 
     val descriptorSetLayout = initDescriptorSetLayout(device)
     val pipelineLayout = initPipelineLayout(device, descriptorSetLayout)
 
     val descriptorPool = initDescriptorPool(device)
-    val descriptorSets = initDescriptorSets(device, descriptorPool, descriptorSetLayout, buffer, uniformData.capacity)
+    val descriptorSets = initDescriptorSets(device,
+                                            descriptorPool,
+                                            descriptorSetLayout,
+                                            buffer,
+                                            uniformData.capacity)
 
     val semaphore = initSemaphore(device)
-    val currentBuffer = vk.acquireNextImageKHR(device, swapchain, java.lang.Long.MAX_VALUE, semaphore, new Vulkan.Fence(0)) 
+    val currentBuffer = vk.acquireNextImageKHR(device,
+                                               swapchain,
+                                               java.lang.Long.MAX_VALUE,
+                                               semaphore,
+                                               new Vulkan.Fence(0))
     val renderPass = initRenderPass(device, swapchainFormat)
 
     val vertexModule = initShaderModule("vert.spv", device)
     val fragmentModule = initShaderModule("frag.spv", device)
 
-    val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG, 
-    inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE)
+    val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(
+      flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
+      inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE)
     vk.beginCommandBuffer(commandBuffer, commandBufferBeginInfo)
 
     val graphicsQueue = vk.getDeviceQueue(device, qi, 0)
 
-    val framebuffers = initFramebuffers(device, imageViews, depthImageView, renderPass, width, height)
+    val framebuffers = initFramebuffers(device,
+                                        imageViews,
+                                        depthImageView,
+                                        renderPass,
+                                        width,
+                                        height)
 
     val vertexData: ByteBuffer = Cube.solidFaceColorsData
     val vertexBuffer = initVertexBuffer(device, vertexData.capacity)
-    val vertexBufferMemory = initBufferMemory(device, memoryProperties, vertexBuffer, vertexData)
+    val vertexBufferMemory =
+      initBufferMemory(device, memoryProperties, vertexBuffer, vertexData)
 
     //code start
     val vertexBinding = new Vulkan.VertexInputBindingDescription(
@@ -98,53 +123,57 @@ object Step14 extends Utils {
       name = "main"
     )
 
-    val vertexInputStateCreateInfo = new Vulkan.PipelineVertexInputStateCreateInfo(
-      flags = 0,
-      vertexBindingDescriptions = Array(vertexBinding),
-      vertexAttributeDescriptions = Array(vertexAttrib0, vertexAttrib1))
+    val vertexInputStateCreateInfo =
+      new Vulkan.PipelineVertexInputStateCreateInfo(
+        flags = 0,
+        vertexBindingDescriptions = Array(vertexBinding),
+        vertexAttributeDescriptions = Array(vertexAttrib0, vertexAttrib1))
 
     val dynamicState = new Vulkan.PipelineDynamicStateCreateInfo(
       flags = 0,
-      dynamicStates = Array(
-        Vulkan.DYNAMIC_STATE_VIEWPORT,
-        Vulkan.DYNAMIC_STATE_SCISSOR))
+      dynamicStates =
+        Array(Vulkan.DYNAMIC_STATE_VIEWPORT, Vulkan.DYNAMIC_STATE_SCISSOR))
 
-    val inputAssemblyStateCreateInfo = new Vulkan.PipelineInputAssemblyStateCreateInfo(
-      flags = 0,
-      topology = Vulkan.PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-      primitiveRestartEnable = false)
+    val inputAssemblyStateCreateInfo =
+      new Vulkan.PipelineInputAssemblyStateCreateInfo(
+        flags = 0,
+        topology = Vulkan.PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        primitiveRestartEnable = false)
 
-    val rasterizationStateCreateInfo = new Vulkan.PipelineRasterizationStateCreateInfo(
-      flags = 0,
-      polygonMode = Vulkan.POLYGON_MODE_FILL,
-      cullMode = Vulkan.CULL_MODE_BACK_BIT,
-      frontFace = Vulkan.FRONT_FACE_CLOCKWISE,
-      depthClampEnable = true,
-      rasterizerDiscardEnable = false,
-      depthBiasEnable = false,
-      depthBiasConstantFactor = 0,
-      depthBiasClamp = 0,
-      depthBiasSlopeFactor = 0,
-      lineWidth = 1f
-    )
+    val rasterizationStateCreateInfo =
+      new Vulkan.PipelineRasterizationStateCreateInfo(
+        flags = 0,
+        polygonMode = Vulkan.POLYGON_MODE_FILL,
+        cullMode = Vulkan.CULL_MODE_BACK_BIT,
+        frontFace = Vulkan.FRONT_FACE_CLOCKWISE,
+        depthClampEnable = true,
+        rasterizerDiscardEnable = false,
+        depthBiasEnable = false,
+        depthBiasConstantFactor = 0,
+        depthBiasClamp = 0,
+        depthBiasSlopeFactor = 0,
+        lineWidth = 1f
+      )
 
-    val colorBlendAttachmentState = new Vulkan.PipelineColorBlendAttachmentState(
-      colorWriteMask = 0xf,
-      blendEnable = false,
-      alphaBlendOp = Vulkan.BLEND_OP_ADD,
-      colorBlendOp = Vulkan.BLEND_OP_ADD,
-      srcColorBlendFactor = Vulkan.BLEND_FACTOR_ZERO,
-      dstColorBlendFactor = Vulkan.BLEND_FACTOR_ZERO,
-      srcAlphaBlendFactor = Vulkan.BLEND_FACTOR_ZERO,
-      dstAlphaBlendFactor = Vulkan.BLEND_FACTOR_ZERO
-    )
-    val colorBlendStateCreateInfo = new Vulkan.PipelineColorBlendStateCreateInfo(
-      flags = 0,
-      attachments = Array(colorBlendAttachmentState),
-      logicOpEnable = false,
-      logicOp = Vulkan.LOGIC_OP_NO_OP,
-      blendConstants = Array(1f, 1f, 1f, 1f)
-    )
+    val colorBlendAttachmentState =
+      new Vulkan.PipelineColorBlendAttachmentState(
+        colorWriteMask = 0xf,
+        blendEnable = false,
+        alphaBlendOp = Vulkan.BLEND_OP_ADD,
+        colorBlendOp = Vulkan.BLEND_OP_ADD,
+        srcColorBlendFactor = Vulkan.BLEND_FACTOR_ZERO,
+        dstColorBlendFactor = Vulkan.BLEND_FACTOR_ZERO,
+        srcAlphaBlendFactor = Vulkan.BLEND_FACTOR_ZERO,
+        dstAlphaBlendFactor = Vulkan.BLEND_FACTOR_ZERO
+      )
+    val colorBlendStateCreateInfo =
+      new Vulkan.PipelineColorBlendStateCreateInfo(
+        flags = 0,
+        attachments = Array(colorBlendAttachmentState),
+        logicOpEnable = false,
+        logicOp = Vulkan.LOGIC_OP_NO_OP,
+        blendConstants = Array(1f, 1f, 1f, 1f)
+      )
 
     val viewportStateCreateInfo = new Vulkan.PipelineViewportStateCreateInfo(
       flags = 0,
@@ -153,7 +182,6 @@ object Step14 extends Utils {
       scissorCount = 1,
       scissors = Array.empty)
 
-
     val depthStencilOpState = new Vulkan.StencilOpState(
       failOp = Vulkan.STENCIL_OP_KEEP,
       passOp = Vulkan.STENCIL_OP_KEEP,
@@ -161,28 +189,33 @@ object Step14 extends Utils {
       compareMask = 0,
       reference = 0,
       depthFailOp = Vulkan.STENCIL_OP_KEEP,
-      writeMask = 0)
+      writeMask = 0
+    )
 
-    val depthStencilStateCreateInfo = new Vulkan.PipelineDepthStencilStateCreateInfo(
-      flags = 0,
-      depthTestEnable = true,
-      depthWriteEnable = true,
-      depthCompareOp = Vulkan.COMPARE_OP_LESS_OR_EQUAL,
-      depthBoundsTestEnable = false,
-      minDepthBounds = 0,
-      maxDepthBounds = 0,
-      stencilTestEnable = false,
-      back = depthStencilOpState,
-      front = depthStencilOpState)
+    val depthStencilStateCreateInfo =
+      new Vulkan.PipelineDepthStencilStateCreateInfo(
+        flags = 0,
+        depthTestEnable = true,
+        depthWriteEnable = true,
+        depthCompareOp = Vulkan.COMPARE_OP_LESS_OR_EQUAL,
+        depthBoundsTestEnable = false,
+        minDepthBounds = 0,
+        maxDepthBounds = 0,
+        stencilTestEnable = false,
+        back = depthStencilOpState,
+        front = depthStencilOpState
+      )
 
-    val multisampleStateCreateInfo = new Vulkan.PipelineMultisampleStateCreateInfo(
-      flags = 0,
-      sampleMask = 0,
-      rasterizationSamples = Vulkan.SAMPLE_COUNT_1_BIT,
-      sampleShadingEnable = false,
-      alphaToCoverageEnable = false,
-      alphaToOneEnable = false,
-      minSampleShading = 0f)
+    val multisampleStateCreateInfo =
+      new Vulkan.PipelineMultisampleStateCreateInfo(
+        flags = 0,
+        sampleMask = 0,
+        rasterizationSamples = Vulkan.SAMPLE_COUNT_1_BIT,
+        sampleShadingEnable = false,
+        alphaToCoverageEnable = false,
+        alphaToOneEnable = false,
+        minSampleShading = 0f
+      )
 
     val pipelineInfo = new Vulkan.GraphicsPipelineCreateInfo(
       layout = pipelineLayout,
@@ -210,10 +243,24 @@ object Step14 extends Utils {
     println("got pipeline")
     /* VULKAN_KEY_END */
 
-    val clearValues0 = new Vulkan.ClearValueColor(color = new Vulkan.ClearColorValueFloat(float32 = Array(0.2f, 0.2f, 0.2f, 0.2f)))
-    val clearValues1 = new Vulkan.ClearValueDepthStencil(depthStencil = new Vulkan.ClearDepthStencilValue(depth = 1.0f, stencil = 0))
-    beginRenderPass(commandBuffer, renderPass, currentBuffer, framebuffers, width, height, Array(clearValues0, clearValues1)) 
-    vk.cmdBindVertexBuffers(commandBuffer, 0, 1, Array(vertexBuffer), Array(new Vulkan.DeviceSize(0)))
+    val clearValues0 = new Vulkan.ClearValueColor(
+      color = new Vulkan.ClearColorValueFloat(
+        float32 = Array(0.2f, 0.2f, 0.2f, 0.2f)))
+    val clearValues1 = new Vulkan.ClearValueDepthStencil(
+      depthStencil =
+        new Vulkan.ClearDepthStencilValue(depth = 1.0f, stencil = 0))
+    beginRenderPass(commandBuffer,
+                    renderPass,
+                    currentBuffer,
+                    framebuffers,
+                    width,
+                    height,
+                    Array(clearValues0, clearValues1))
+    vk.cmdBindVertexBuffers(commandBuffer,
+                            0,
+                            1,
+                            Array(vertexBuffer),
+                            Array(0L))
     vk.cmdEndRenderPass(commandBuffer)
     vk.endCommandBuffer(commandBuffer)
 
@@ -244,7 +291,9 @@ object Step14 extends Utils {
     vk.destroyImageView(device, depthImageView)
     vk.freeMemory(device, depthImageMemory)
     vk.destroyImage(device, depthImage)
-    imageViews.foreach { i => vk.destroyImageView(device, i)}
+    imageViews.foreach { i =>
+      vk.destroyImageView(device, i)
+    }
     vk.destroySwapchain(device, swapchain)
     vk.freeCommandBuffers(device, commandPool, 1, commandBuffer)
     vk.destroyCommandPool(device, commandPool)

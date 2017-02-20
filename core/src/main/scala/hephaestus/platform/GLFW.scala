@@ -7,7 +7,6 @@ trait Callback[A] {
   def call(a: A): Unit
 }
 
-
 @nativeLoader("hephaestus0")
 class GLFW {
 
@@ -18,16 +17,23 @@ class GLFW {
   @native def createWindow(width: Int, height: Int, name: String): GLFW.Window
   @native def destroyWindow(window: GLFW.Window): Unit
 
-  @native def setWindowCloseCallback(window: GLFW.Window, callback: Callback[GLFW.Window]): Unit
+  @native
+  def setWindowCloseCallback(window: GLFW.Window,
+                             callback: Callback[GLFW.Window]): Unit
   @native def waitEvents(): Unit
 
   @native def windowHint(hint: GLFW.Hint, value: GLFW.HintValue): Unit
   @native def vulkanSupported(): Boolean
 
   @native def getRequiredInstanceExtensions(): Array[String]
-  @native def createWindowSurface(inst: Vulkan.Instance, window: GLFW.Window): Vulkan.Surface
+  @native
+  def createWindowSurface(inst: Vulkan.Instance,
+                          window: GLFW.Window): Vulkan.Surface
 
-  @native def getPhysicalDevicePresentationSupport(inst: Vulkan.Instance, device: Vulkan.PhysicalDevice, index: Int): Boolean
+  @native
+  def getPhysicalDevicePresentationSupport(inst: Vulkan.Instance,
+                                           device: Vulkan.PhysicalDevice,
+                                           index: Int): Boolean
 }
 
 object GLFW {

@@ -8,7 +8,8 @@ import sun.nio.ch.DirectBuffer
 
 final class Buffer[A](val value: jio.ByteBuffer) extends AnyVal { self =>
 
-  def apply(n: Int)(implicit read: ops.buffer.Apply[A], size: ops.buffer.Bytes[A]): A = read(value, n * size.N)
+  def apply(n: Int)(implicit read: ops.buffer.Apply[A],
+                    size: ops.buffer.Bytes[A]): A = read(value, n * size.N)
 
   def size(implicit size: ops.buffer.Bytes[A]): Int = value.capacity() / size.N
 
@@ -18,10 +19,11 @@ final class Buffer[A](val value: jio.ByteBuffer) extends AnyVal { self =>
   }
 
   def direct: Boolean = value.isDirect
- 
+
   def order: ByteOrder = value.order
 
-  def position(implicit bytes: ops.buffer.Bytes[A]): Int = value.position() / bytes.N
+  def position(implicit bytes: ops.buffer.Bytes[A]): Int =
+    value.position() / bytes.N
 
   def reset(): Buffer[A] = {
     value.reset()
@@ -45,7 +47,7 @@ final class Buffer[A](val value: jio.ByteBuffer) extends AnyVal { self =>
     self
   }
 
-   def free(): Unit = {
+  def free(): Unit = {
     if (direct) {
       val db = value.asInstanceOf[DirectBuffer]
       db.cleaner().clean()
@@ -55,21 +57,26 @@ final class Buffer[A](val value: jio.ByteBuffer) extends AnyVal { self =>
 
 object Buffer {
 
-  def apply[A](a: A*)(implicit bytes: ops.buffer.Bytes[A], put: ops.buffer.Put[A]): Buffer[A] = {
+  def apply[A](a: A*)(implicit bytes: ops.buffer.Bytes[A],
+                      put: ops.buffer.Put[A]): Buffer[A] = {
     val b = empty[A](a.size)
     a.foreach(b.put)
     b.rewind()
     b
   }
 
-  def direct[A](a: A*)(implicit bytes: ops.buffer.Bytes[A], put: ops.buffer.Put[A]): Buffer[A] = {
+  def direct[A](a: A*)(implicit bytes: ops.buffer.Bytes[A],
+                       put: ops.buffer.Put[A]): Buffer[A] = {
     val b = emptyDirect[A](a.size)
     a.foreach(b.put)
     b.rewind()
     b
   }
 
-  def empty[A](n: Int)(implicit bytes: ops.buffer.Bytes[A]): Buffer[A] = new Buffer[A](ByteBuffer.allocate(n * bytes.N))
+  def empty[A](n: Int)(implicit bytes: ops.buffer.Bytes[A]): Buffer[A] =
+    new Buffer[A](ByteBuffer.allocate(n * bytes.N))
 
-  def emptyDirect[A](n: Int)(implicit size: ops.buffer.Bytes[A]): Buffer[A] = new Buffer(ByteBuffer.allocateDirect(n * size.N).order(ByteOrder.nativeOrder()))
+  def emptyDirect[A](n: Int)(implicit size: ops.buffer.Bytes[A]): Buffer[A] =
+    new Buffer(
+      ByteBuffer.allocateDirect(n * size.N).order(ByteOrder.nativeOrder()))
 }

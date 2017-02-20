@@ -1221,11 +1221,8 @@ JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_destroyShaderModule
 
 
 VkCommandBufferInheritanceInfo toCommandBufferInheritanceInfo(JNIEnv* env, jobject o) {
-  MARK("f")
   jclass cls = (*env)->GetObjectClass(env, o);
-  MARK("fg")
   jlong rp = getLong(env, cls, o, "renderPass");
-  MARK("fh")
   VkCommandBufferInheritanceInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
     .framebuffer = VK_NULL_HANDLE,
@@ -1235,17 +1232,12 @@ VkCommandBufferInheritanceInfo toCommandBufferInheritanceInfo(JNIEnv* env, jobje
 }
 
 VkCommandBufferBeginInfo toCommandBufferBeginInfo(JNIEnv* env, jobject o) {
-  MARK("a")
   jclass cls = (*env)->GetObjectClass(env, o);
   jint flags = getInt(env, cls, o, "flags");
-  MARK("b")
   jmethodID ii_id = (*env)->GetMethodID(env, cls, "inheritanceInfo", 
                                          "()Lhephaestus/platform/Vulkan$CommandBufferInheritanceInfo;");
-  MARK("c")
   jobject ii_o = (*env)->CallObjectMethod(env, o, ii_id);
-  MARK("d")
   VkCommandBufferInheritanceInfo ii = toCommandBufferInheritanceInfo(env, ii_o);
-  MARK("e")
   VkCommandBufferInheritanceInfo* ii_ptr = malloc(sizeof(VkCommandBufferInheritanceInfo));
   if(ii.renderPass == 0) {
     fprintf(stdout, "null handle");
@@ -1256,7 +1248,6 @@ VkCommandBufferBeginInfo toCommandBufferBeginInfo(JNIEnv* env, jobject o) {
     fflush(stdout);
     *ii_ptr = ii;
   }
-  MARK("f")
   VkCommandBufferBeginInfo v_info = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
     .pNext = NULL,
@@ -1437,6 +1428,19 @@ VkOffset2D toOffset2D(JNIEnv* env, jobject e) {
   return off;
 }
 
+VkOffset3D toOffset3D(JNIEnv* env, jobject o) {
+  jclass cls = (*env)->GetObjectClass(env, o);
+  jint x = getInt(env, cls, o, "x");
+  jint y = getInt(env, cls, o, "y");
+  jint z = getInt(env, cls, o, "z");
+  VkOffset3D off = {
+    .x = x,
+    .y = y,
+    .z = z
+  };
+  return off;
+}
+
 VkRect2D toRect2D(JNIEnv* env, jobject o) {
   jclass cls = (*env)->GetObjectClass(env, o);
   jmethodID of_id = (*env)->GetMethodID(env, cls, "offset", "()Lhephaestus/platform/Vulkan$Offset2D;");
@@ -1558,20 +1562,17 @@ VkBuffer toBuffer(JNIEnv* env, jobject o) {
   return (VkBuffer) ptr;
 }
 
-
-VkDeviceSize toDeviceSize(JNIEnv* env, jobject o) {
-  jclass cls = (*env)->GetObjectClass(env, o);
-  jmethodID size_id = (*env)->GetMethodID(env, cls, "size", "()J");
-  jlong size = (*env)->CallLongMethod(env, o, size_id);
-  return (VkDeviceSize) size;
-}
-
 JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdBindVertexBuffers
 (JNIEnv* env, jobject instance __attribute__((unused)), jlong cmd_buffer, jint first, jint count, jobjectArray buffers, 
- jobjectArray offsets) {
+ jlongArray offsets) {
   VkBuffer* v_buffers = ITER(env, buffers, (uint32_t) count, VkBuffer, toBuffer)
-  VkDeviceSize* v_offsets = ITER(env, offsets, (uint32_t) count, VkDeviceSize, toDeviceSize)
+  VkDeviceSize* v_offsets = (*env)->GetLongArrayElements(env, offsets, 0);
   vkCmdBindVertexBuffers((VkCommandBuffer) cmd_buffer, first, count, v_buffers, v_offsets);
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdBindIndexBuffer
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong cmd_buffer, jlong buffer, jlong offset, jint index_type) {
+  vkCmdBindIndexBuffer((VkCommandBuffer) cmd_buffer, (VkBuffer) buffer, offset, index_type);
 }
 
 JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdEndRenderPass
@@ -2211,6 +2212,10 @@ JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdDraw
   vkCmdDraw((VkCommandBuffer) buffer, vertex_count, instance_count, first_vertex, first_instance);
 }
 
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdDrawIndexed
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong buffer, jint index_count, jint instance_count, jint first_index, jint vertex_offset, jint first_instance) {
+  vkCmdDrawIndexed((VkCommandBuffer) buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
+}
 
 VkSwapchainKHR toSwapchainKHR(JNIEnv* env, jobject o) {
   jclass cls = (*env)->GetObjectClass(env, o);
@@ -2401,4 +2406,95 @@ JNIEXPORT jlong JNICALL Java_hephaestus_platform_Vulkan_createSampler
   VkSampler s;
   vkCreateSampler((VkDevice) device, &v_info, NULL, &s);
   return s;
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_destroySampler
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong device, jlong sampler) {
+  vkDestroySampler((VkDevice) device, (VkSampler) sampler, NULL);
+}
+
+VkBufferCopy toBufferCopy(JNIEnv* env, jobject o) {
+  jclass cls = (*env)->GetObjectClass(env, o);
+  int src = getLong(env, cls, o, "srcOffset");
+  int dst = getLong(env, cls, o, "dstOffset");
+  int size = getLong(env, cls, o, "size");
+  VkBufferCopy v_o = {
+    .srcOffset = src,
+    .dstOffset = dst,
+    .size = size
+  };
+  return v_o;
+}
+
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdCopyBuffer
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong cmd_buffer, jlong src, jlong dst, jobjectArray regions) {
+  jsize region_count = (*env)->GetArrayLength(env, regions);
+  const VkBufferCopy* v_regions = ITER(env, regions, (uint32_t) region_count, VkBufferCopy, toBufferCopy);
+  vkCmdCopyBuffer((VkCommandBuffer) cmd_buffer, (VkBuffer) src, (VkBuffer) dst, region_count, v_regions);
+}
+
+VkImageSubresourceLayers toImageSubresourceLayers(JNIEnv* env, jobject o) {
+  jclass cls = (*env)->GetObjectClass(env, o);
+  int iaf = getInt(env, cls, o, "aspectMask");
+  int ml = getInt(env, cls, o, "mipLevel");
+  int bal = getInt(env, cls, o, "baseArrayLayer");
+  int lc = getInt(env, cls, o, "layerCount");
+  VkImageSubresourceLayers v_o = {
+    .aspectMask = iaf,
+    .mipLevel = ml,
+    .baseArrayLayer = bal,
+    .layerCount = lc
+  };
+  return v_o;
+}
+
+
+VkBufferImageCopy toBufferImageCopy(JNIEnv* env, jobject o) {
+  jclass cls = (*env)->GetObjectClass(env, o);
+  MARK("d")
+  long boff = getLong(env, cls, o, "bufferOffset");
+  MARK("e")
+  int brl = getInt(env, cls, o, "bufferRowLength");
+  MARK("f")
+  int bih = getInt(env, cls, o, "bufferImageHeight");
+  MARK("g")
+  VkImageSubresourceLayers ils = getObject(env, cls, o, "imageSubresource", HEPH "ImageSubresourceLayers", toImageSubresourceLayers);
+  MARK("h")
+  VkOffset3D ioff = getObject(env, cls, o, "imageOffset", HEPH "Offset3D", toOffset3D);
+  MARK("i")
+  VkExtent3D iext = getObject(env, cls, o, "imageExtent", HEPH "Extent3D", toExtent3D);
+  MARK("j")
+  fprintf(stdout, "extent is %d %d %d \n", iext.width, iext.height, iext.depth);
+  fprintf(stdout, "offset is %d %d %d \n", ioff.x, ioff.y, ioff.z);
+  fprintf(stdout, "buffer offset is %d %d %d \n", boff, brl, bih);
+  VkBufferImageCopy v_o = {
+    .bufferOffset = boff,
+    .bufferRowLength = brl,
+    .bufferImageHeight = bih,
+    .imageSubresource = ils,
+    .imageOffset = ioff,
+    .imageExtent = iext
+  };
+  return v_o;
+}
+/*
+ * Class:     hephaestus_platform_Vulkan
+ * Method:    cmdCopyBufferToImage
+ * Signature: (JJJI[Lhephaestus/platform/Vulkan/BufferImageCopy;)V
+ */
+JNIEXPORT void JNICALL Java_hephaestus_platform_Vulkan_cmdCopyBufferToImage
+(JNIEnv* env, jobject instance __attribute__((unused)), jlong cmd_buffer, jlong src, jlong dst, jint layout, jobjectArray regions) {
+  MARK("a")
+  jsize region_count = (*env)->GetArrayLength(env, regions);
+  MARK("b")
+  const VkBufferImageCopy* v_regions = ITER(env, regions, (uint32_t) region_count, VkBufferImageCopy, toBufferImageCopy);
+  fprintf(stdout, "region count is %d \n", region_count);
+  fflush(stdout);
+  vkCmdCopyBufferToImage((VkCommandBuffer) cmd_buffer, (VkBuffer) src, (VkImage) dst, layout, region_count, v_regions);
+  MARK("c")
+}
+
+JNIEXPORT jlong JNICALL Java_hephaestus_platform_Vulkan_getFenceStatus
+(JNIEnv* env __attribute__((unused)), jobject instance __attribute__((unused)), jlong device, jlong fence) {
+  return vkGetFenceStatus((VkDevice) device, (VkFence) fence);
 }

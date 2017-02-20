@@ -5,13 +5,18 @@ package tutorial
 import hephaestus.platform._
 import java.nio._
 
-/** Draws a coloured cube */
-object Step15 extends Utils {
+/** Draws a coloured cube using a staging buffer on a different queue family
+Combine the vertex and index buffers into one
+
+Perhaps this should be extended to include views
+How do images behave?
+  */
+object Step22 extends Utils {
 
   def main(args: Array[String]): Unit = {
     glfw.init()
 
-    val instance = initInstanceExtensionsDump()
+    val instance = initInstanceExtensionsDebug()
 
     glfw.windowHint(GLFW.CLIENT_API, GLFW.NO_API)
     val width = 500
@@ -21,10 +26,23 @@ object Step15 extends Utils {
 
     val physicalDevice = vk.enumeratePhysicalDevices(instance)(0)
     val qi = initGraphicsPresentQueueFamilyIndex(instance, physicalDevice)
-    val device = initDeviceExtensions(physicalDevice, qi)
+    //need to change this
+    val device = vk.createDevice(
+      physicalDevice,
+      new Vulkan.DeviceCreateInfo(
+        queueCreateInfos = Array(
+          new Vulkan.DeviceQueueCreateInfo(
+            flags = 0,
+            queueFamilyIndex = qi,
+            queuePriorities = Array(0f, 0f)
+          )),
+        enabledExtensionNames = Array(Vulkan.SWAPCHAIN_EXTENSION_NAME)
+      )
+    )
 
     val commandPool = initCommandPool(device, qi)
     val commandBuffer = initCommandBuffer(device, commandPool)
+    val loadCommandBuffer = initCommandBuffer(device, commandPool)
 
     val swapchainFormat = initSwapchainFormat(surface, physicalDevice)
     val surfaceCapabilities =
@@ -68,12 +86,9 @@ object Step15 extends Utils {
     val vertexModule = initShaderModule("vert.spv", device)
     val fragmentModule = initShaderModule("frag.spv", device)
 
-    val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(
-      flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
-      inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE)
-    vk.beginCommandBuffer(commandBuffer, commandBufferBeginInfo)
-
     val graphicsQueue = vk.getDeviceQueue(device, qi, 0)
+    println(s"queue index is ${qi}")
+    val loadQueue = vk.getDeviceQueue(device, qi, 1)
 
     val framebuffers = initFramebuffers(device,
                                         imageViews,
@@ -83,10 +98,104 @@ object Step15 extends Utils {
                                         height)
 
     val vertexData: ByteBuffer = Cube.solidFaceColorsData
-    val vertexBuffer = initVertexBuffer(device, vertexData.capacity)
-    val vertexBufferMemory =
-      initBufferMemory(device, memoryProperties, vertexBuffer, vertexData)
+    val indexData: ByteBuffer = Cube.solidFaceUvsElementData
 
+    val vertexBuffer = vk.createBuffer(
+      device,
+      new Vulkan.BufferCreateInfo(
+        usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT | Vulkan.BUFFER_USAGE_TRANSFER_SRC_BIT | Vulkan.BUFFER_USAGE_INDEX_BUFFER_BIT | Vulkan.BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
+        size = vertexData.capacity + indexData.capacity,
+        queueFamilyIndices = Array.empty[Int],
+        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
+        flags = 0
+      )
+    )
+    val vertexBufferMemoryRequirements =
+      vk.getBufferMemoryRequirements(device, vertexBuffer)
+    val vertexBufferMemoryTypeIndex = memoryTypeIndex(
+      memoryProperties,
+      vertexBufferMemoryRequirements,
+      Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    val vertexBufferMemoryAllocationInfo = new Vulkan.MemoryAllocateInfo(
+      allocationSize = vertexBufferMemoryRequirements.size,
+      memoryTypeIndex = vertexBufferMemoryTypeIndex)
+    val vertexBufferMemory =
+      vk.allocateMemory(device, vertexBufferMemoryAllocationInfo)
+    val vertexDataPtr = vk.mapMemory(device,
+                                     vertexBufferMemory,
+                                     0,
+                                     vertexBufferMemoryRequirements.size,
+                                     0)
+    vk.loadMemory(vertexDataPtr, vertexData)
+    vk.loadMemory(vertexDataPtr + vertexData.capacity, indexData)
+    vk.unmapMemory(device, vertexBufferMemory)
+    vk.bindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0)
+
+    val deviceLocalVertexBuffer = vk.createBuffer(
+      device,
+      new Vulkan.BufferCreateInfo(
+        usage = Vulkan.BUFFER_USAGE_VERTEX_BUFFER_BIT | Vulkan.BUFFER_USAGE_TRANSFER_DST_BIT | Vulkan.BUFFER_USAGE_INDEX_BUFFER_BIT,
+        size = vertexData.capacity + indexData.capacity,
+        queueFamilyIndices = Array.empty[Int],
+        sharingMode = Vulkan.SHARING_MODE_EXCLUSIVE,
+        flags = 0
+      )
+    )
+    val deviceLocalVertexBufferMemoryRequirements =
+      vk.getBufferMemoryRequirements(device, deviceLocalVertexBuffer)
+    val deviceLocalVertexBufferMemoryTypeIndex = memoryTypeIndex(
+      memoryProperties,
+      deviceLocalVertexBufferMemoryRequirements,
+      Vulkan.MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    val deviceLocalVertexBufferMemoryAllocationInfo =
+      new Vulkan.MemoryAllocateInfo(
+        allocationSize = deviceLocalVertexBufferMemoryRequirements.size,
+        memoryTypeIndex = deviceLocalVertexBufferMemoryTypeIndex)
+    val deviceLocalVertexBufferMemory =
+      vk.allocateMemory(device, deviceLocalVertexBufferMemoryAllocationInfo)
+    vk.bindBufferMemory(device,
+                        deviceLocalVertexBuffer,
+                        deviceLocalVertexBufferMemory,
+                        0L)
+
+    vk.beginCommandBuffer(
+      loadCommandBuffer,
+      new Vulkan.CommandBufferBeginInfo(
+        flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
+        inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE)
+    )
+    vk.cmdCopyBuffer(
+      loadCommandBuffer,
+      vertexBuffer,
+      deviceLocalVertexBuffer,
+      Array(
+        new Vulkan.BufferCopy(srcOffset = 0L,
+                              dstOffset = 0L,
+                              size = vertexData.capacity + indexData.capacity))
+    )
+
+    vk.endCommandBuffer(loadCommandBuffer)
+
+    val loadSemaphore = initSemaphore(device)
+    vk.queueSubmit(
+      loadQueue,
+      1,
+      Array(
+        new Vulkan.SubmitInfo(
+          waitSemaphores = Array.empty[Vulkan.Semaphore],
+          waitDstStageMask =
+            Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+          commandBuffers = Array(loadCommandBuffer),
+          signalSemaphores = Array(loadSemaphore)
+        )
+      ),
+      new Vulkan.Fence(0)
+    )
+
+    val commandBufferBeginInfo = new Vulkan.CommandBufferBeginInfo(
+      flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
+      inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE)
+    vk.beginCommandBuffer(commandBuffer, commandBufferBeginInfo)
     val pipeline = initPipeline(device,
                                 renderPass,
                                 vertexModule,
@@ -105,6 +214,18 @@ object Step15 extends Utils {
                                                java.lang.Long.MAX_VALUE,
                                                semaphore,
                                                new Vulkan.Fence(0))
+
+    //do we need a semaphore too?
+    // vk.cmdPipelineBarrier(commandBuffer, new Vulkan.PipelineStageFlag(0), new Vulkan.PipelineStageFlag(0), 0, Array.empty, Array(
+    //   new Vulkan.BufferMemoryBarrier(
+    //     srcAccessMask = new Vulkan.AccessFlag(0),
+    //     dstAccessMask = new Vulkan.AccessFlag(0),
+    //     srcQueueFamilyIndex = qi,
+    //     dstQueueFamilyIndex = qi,
+    //     buffer = deviceLocalVertexBuffer,
+    //     offset = new Vulkan.DeviceSize(0),
+    //     size = new Vulkan.DeviceSize(vertexData.capacity))
+    // ), Array.empty)
     beginRenderPass(commandBuffer,
                     renderPass,
                     currentBuffer,
@@ -128,8 +249,13 @@ object Step15 extends Utils {
     vk.cmdBindVertexBuffers(commandBuffer,
                             0,
                             1,
-                            Array(vertexBuffer),
+                            Array(deviceLocalVertexBuffer),
                             Array(0L))
+    vk.cmdBindIndexBuffer(commandBuffer,
+                          deviceLocalVertexBuffer,
+                          vertexData.capacity,
+                          Vulkan.INDEX_TYPE_UINT32)
+
     val viewport = new Vulkan.Viewport(height = height,
                                        width = width,
                                        minDepth = 0f,
@@ -142,7 +268,7 @@ object Step15 extends Utils {
       offset = new Vulkan.Offset2D(x = 0, y = 0)
     )
     vk.cmdSetScissor(commandBuffer, 0, 1, Array(scissor))
-    vk.cmdDraw(commandBuffer, 12 * 3, 1, 0, 0)
+    vk.cmdDrawIndexed(commandBuffer, 36, 1, 0, 0, 0)
     //code end
 
     vk.cmdEndRenderPass(commandBuffer)
@@ -150,7 +276,31 @@ object Step15 extends Utils {
 
     val fence = initFence(device)
     //wait for the semaphore
-    submitQueueWait(device, fence, commandBuffer, graphicsQueue, semaphore)
+
+    vk.queueSubmit(
+      graphicsQueue,
+      1,
+      Array(
+        new Vulkan.SubmitInfo(
+          waitSemaphores = Array(loadSemaphore, semaphore),
+          waitDstStageMask =
+            Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+          commandBuffers = Array(commandBuffer),
+          signalSemaphores = Array.empty
+        )
+      ),
+      fence
+    )
+
+    var shouldWait = true
+    while (shouldWait) {
+      val res = vk.waitForFences(device, 1, Array(fence), true, FENCE_TIMEOUT)
+      //println(s"waiting...${res.value}")
+      if (res.value != Vulkan.TIMEOUT.value) {
+        println("finished waiting")
+        shouldWait = false
+      }
+    }
 
     //code start
     val presentInfo = new Vulkan.PresentInfoKHR(swapchains = Array(swapchain),
@@ -169,6 +319,8 @@ object Step15 extends Utils {
 
     vk.destroyPipeline(device, pipeline)
 
+    vk.destroyBuffer(device, deviceLocalVertexBuffer)
+    vk.freeMemory(device, deviceLocalVertexBufferMemory)
     vk.destroyBuffer(device, vertexBuffer)
     vk.freeMemory(device, vertexBufferMemory)
 
@@ -198,3 +350,11 @@ object Step15 extends Utils {
     glfw.terminate()
   }
 }
+/**
+flags 15 count 16 bits: 64 //graphics, compute, transfer, sparse
+flags 4 count 1 bits: 64 //transfer
+
+no warnings (good)
+but image is in state undefined before presenting.  should sort this out.
+
+  * */

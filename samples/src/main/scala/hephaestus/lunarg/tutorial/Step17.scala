@@ -23,28 +23,41 @@ object Step17 extends Utils {
     val qi = initGraphicsPresentQueueFamilyIndex(instance, physicalDevice)
     val device = initDeviceExtensions(physicalDevice, qi)
 
-    val commandPool = vk.createCommandPool(device, new Vulkan.CommandPoolCreateInfo(
-      flags = Vulkan.COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-      queueFamilyIndex = qi
-    ))
-    val commandBuffer = vk.allocateCommandBuffers(device, new Vulkan.CommandBufferAllocateInfo(
-      commandPool = commandPool,
-      level = Vulkan.COMMAND_BUFFER_LEVEL_SECONDARY,
-      commandBufferCount = 1
-    ))
+    val commandPool = vk.createCommandPool(
+      device,
+      new Vulkan.CommandPoolCreateInfo(
+        flags = Vulkan.COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        queueFamilyIndex = qi
+      ))
+    val commandBuffer = vk.allocateCommandBuffers(
+      device,
+      new Vulkan.CommandBufferAllocateInfo(
+        commandPool = commandPool,
+        level = Vulkan.COMMAND_BUFFER_LEVEL_SECONDARY,
+        commandBufferCount = 1
+      ))
     val primaryCommandBuffer = initCommandBuffer(device, commandPool)
 
     val swapchainFormat = initSwapchainFormat(surface, physicalDevice)
-    val surfaceCapabilities = vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
+    val surfaceCapabilities =
+      vk.getPhysicalDeviceSurfaceCapabilities(physicalDevice, surface)
     val swapchainExtent = initSwapchainExtent(surfaceCapabilities)
-    val swapchain = initSwapchain(surface, physicalDevice, device, swapchainFormat, swapchainExtent, surfaceCapabilities)
+    val swapchain = initSwapchain(surface,
+                                  physicalDevice,
+                                  device,
+                                  swapchainFormat,
+                                  swapchainExtent,
+                                  surfaceCapabilities)
 
     val swapchainImages = vk.getSwapchainImages(device, swapchain)
     val imageViews = initImageViews(device, swapchain, swapchainFormat)
     val depthImage = initDepthImage(physicalDevice, device, swapchainExtent)
 
     val memoryProperties = vk.getPhysicalDeviceMemoryProperties(physicalDevice)
-    val depthImageMemory = initDepthImageMemory(physicalDevice, device, depthImage, memoryProperties)
+    val depthImageMemory = initDepthImageMemory(physicalDevice,
+                                                device,
+                                                depthImage,
+                                                memoryProperties)
     val depthImageView = initDepthImageView(device, depthImage)
 
     //have the uniform data change per frame
@@ -52,22 +65,30 @@ object Step17 extends Utils {
     val buffer = initBuffer(device, uniformData.capacity)
 
     //vk.loadMemory(dataPtr, data)
-    val bufferMemoryRequirements = vk.getBufferMemoryRequirements(device, buffer)
-    val bufferMemoryTypeIndex = memoryTypeIndex(memoryProperties, bufferMemoryRequirements,
+    val bufferMemoryRequirements =
+      vk.getBufferMemoryRequirements(device, buffer)
+    val bufferMemoryTypeIndex = memoryTypeIndex(
+      memoryProperties,
+      bufferMemoryRequirements,
       Vulkan.MEMORY_PROPERTY_HOST_VISIBLE_BIT | Vulkan.MEMORY_PROPERTY_HOST_COHERENT_BIT)
     val bufferMemoryAllocationInfo = new Vulkan.MemoryAllocateInfo(
       allocationSize = bufferMemoryRequirements.size,
       memoryTypeIndex = bufferMemoryTypeIndex)
     val bufferMemory = vk.allocateMemory(device, bufferMemoryAllocationInfo)
-    val uniformDataPtr = vk.mapMemory(device, bufferMemory, new Vulkan.DeviceSize(0), bufferMemoryRequirements.size, 0) 
+    val uniformDataPtr =
+      vk.mapMemory(device, bufferMemory, 0L, bufferMemoryRequirements.size, 0)
     //vk.unmapMemory(device, bufferMemory)
-    vk.bindBufferMemory(device, buffer, bufferMemory, new Vulkan.DeviceSize(0))
+    vk.bindBufferMemory(device, buffer, bufferMemory, 0L)
 
     val descriptorSetLayout = initDescriptorSetLayout(device)
     val pipelineLayout = initPipelineLayout(device, descriptorSetLayout)
 
     val descriptorPool = initDescriptorPool(device)
-    val descriptorSets = initDescriptorSets(device, descriptorPool, descriptorSetLayout, buffer, uniformData.capacity)
+    val descriptorSets = initDescriptorSets(device,
+                                            descriptorPool,
+                                            descriptorSetLayout,
+                                            buffer,
+                                            uniformData.capacity)
 
     val renderPass = initRenderPass(device, swapchainFormat)
 
@@ -78,33 +99,59 @@ object Step17 extends Utils {
       Vulkan.COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | Vulkan.COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
       new Vulkan.CommandBufferInheritanceInfo(
         renderPass = renderPass
-      ))
+      )
+    )
     vk.beginCommandBuffer(commandBuffer, commandBufferBeginInfo)
 
     val graphicsQueue = vk.getDeviceQueue(device, qi, 0)
 
-    val framebuffers = initFramebuffers(device, imageViews, depthImageView, renderPass, width, height)
+    val framebuffers = initFramebuffers(device,
+                                        imageViews,
+                                        depthImageView,
+                                        renderPass,
+                                        width,
+                                        height)
 
     val vertexData: ByteBuffer = Cube.solidFaceColorsData
     val vertexBuffer = initVertexBuffer(device, vertexData.capacity)
-    val vertexBufferMemory = initBufferMemory(device, memoryProperties, vertexBuffer, vertexData)
+    val vertexBufferMemory =
+      initBufferMemory(device, memoryProperties, vertexBuffer, vertexData)
 
-    val pipeline = initPipeline(device, renderPass, vertexModule, fragmentModule, pipelineLayout)
-    val clearValues0 = new Vulkan.ClearValueColor(color = new Vulkan.ClearColorValueFloat(float32 = Array(0.2f, 0.2f, 0.2f, 0.2f)))
-    val clearValues1 = new Vulkan.ClearValueDepthStencil(depthStencil = new Vulkan.ClearDepthStencilValue(depth = 1.0f, stencil = 0))
+    val pipeline = initPipeline(device,
+                                renderPass,
+                                vertexModule,
+                                fragmentModule,
+                                pipelineLayout)
+    val clearValues0 = new Vulkan.ClearValueColor(
+      color = new Vulkan.ClearColorValueFloat(
+        float32 = Array(0.2f, 0.2f, 0.2f, 0.2f)))
+    val clearValues1 = new Vulkan.ClearValueDepthStencil(
+      depthStencil =
+        new Vulkan.ClearDepthStencilValue(depth = 1.0f, stencil = 0))
 
     //code start
-    vk.cmdBindPipeline(commandBuffer, Vulkan.PIPELINE_BIND_POINT_GRAPHICS, pipeline)
-    vk.cmdBindDescriptorSets(commandBuffer, Vulkan.PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-      0, descriptorSets.size, descriptorSets, 0, Array.empty)
-    vk.cmdBindVertexBuffers(commandBuffer, 0, 1, Array(vertexBuffer), Array(new Vulkan.DeviceSize(0)))
-    val viewport = new Vulkan.Viewport(
-      height = height,
-      width = width,
-      minDepth = 0f,
-      maxDepth = 1f,
-      x = 0,
-      y = 0)
+    vk.cmdBindPipeline(commandBuffer,
+                       Vulkan.PIPELINE_BIND_POINT_GRAPHICS,
+                       pipeline)
+    vk.cmdBindDescriptorSets(commandBuffer,
+                             Vulkan.PIPELINE_BIND_POINT_GRAPHICS,
+                             pipelineLayout,
+                             0,
+                             descriptorSets.size,
+                             descriptorSets,
+                             0,
+                             Array.empty)
+    vk.cmdBindVertexBuffers(commandBuffer,
+                            0,
+                            1,
+                            Array(vertexBuffer),
+                            Array(0L))
+    val viewport = new Vulkan.Viewport(height = height,
+                                       width = width,
+                                       minDepth = 0f,
+                                       maxDepth = 1f,
+                                       x = 0,
+                                       y = 0)
     vk.cmdSetViewport(commandBuffer, 0, 1, Array(viewport))
     val scissor = new Vulkan.Rect2D(
       extent = new Vulkan.Extent2D(width = width, height = height),
@@ -119,14 +166,21 @@ object Step17 extends Utils {
     val fence = initFence(device)
 
     (0 until 10000).foreach { i =>
-
       //since memory is coherent, we just need to do a memcopy
       val uniformDataPerFrame = Cube.uniformData(width, height, i)
       vk.loadMemory(uniformDataPtr, uniformDataPerFrame)
 
-      val currentBuffer = vk.acquireNextImageKHR(device, swapchain, java.lang.Long.MAX_VALUE, acquireSemaphore, new Vulkan.Fence(0))
-      vk.beginCommandBuffer(primaryCommandBuffer, new Vulkan.CommandBufferBeginInfo(flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
-        inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE))
+      val currentBuffer = vk.acquireNextImageKHR(device,
+                                                 swapchain,
+                                                 java.lang.Long.MAX_VALUE,
+                                                 acquireSemaphore,
+                                                 new Vulkan.Fence(0))
+      vk.beginCommandBuffer(
+        primaryCommandBuffer,
+        new Vulkan.CommandBufferBeginInfo(
+          flags = Vulkan.COMMAND_BUFFER_USAGE_BLANK_FLAG,
+          inheritanceInfo = Vulkan.COMMAND_BUFFER_INHERITANCE_INFO_NULL_HANDLE)
+      )
 
       val clearValues = Array(clearValues0, clearValues1)
       val renderPassBeginInfo = new Vulkan.RenderPassBeginInfo(
@@ -137,7 +191,9 @@ object Step17 extends Utils {
           extent = new Vulkan.Extent2D(width = width, height = height)),
         clearValues = clearValues
       )
-      vk.cmdBeginRenderPass(primaryCommandBuffer, renderPassBeginInfo, Vulkan.SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS)
+      vk.cmdBeginRenderPass(primaryCommandBuffer,
+                            renderPassBeginInfo,
+                            Vulkan.SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS)
       vk.cmdExecuteCommands(primaryCommandBuffer, 1, Array(commandBuffer))
       //execute buffer here
       vk.cmdEndRenderPass(primaryCommandBuffer)
@@ -146,24 +202,27 @@ object Step17 extends Utils {
       //signal the render semaphore
       val submitInfo = new Vulkan.SubmitInfo(
         waitSemaphores = Array(acquireSemaphore),
-        waitDstStageMask = Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
+        waitDstStageMask =
+          Array(Vulkan.PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
         commandBuffers = Array(primaryCommandBuffer),
-        signalSemaphores = Array(renderSemaphore))
+        signalSemaphores = Array(renderSemaphore)
+      )
       vk.queueSubmit(graphicsQueue, 1, Array(submitInfo), new Vulkan.Fence(0))
       vk.queueSubmit(graphicsQueue, 0, Array.empty, fence)
 
-      val presentInfo = new Vulkan.PresentInfoKHR(
-        swapchains = Array(swapchain),
-        imageIndices = currentBuffer,
-        waitSemaphores = Array(renderSemaphore))
+      val presentInfo =
+        new Vulkan.PresentInfoKHR(swapchains = Array(swapchain),
+                                  imageIndices = currentBuffer,
+                                  waitSemaphores = Array(renderSemaphore))
 
       vk.queuePresentKHR(graphicsQueue, presentInfo)
 
       var shouldWait = true
       println("about to wait")
-      while(shouldWait) {
-        val res = vk.waitForFences(device, 1, Array(fence), false, FENCE_TIMEOUT)
-        if(res.value != Vulkan.TIMEOUT.value) {
+      while (shouldWait) {
+        val res =
+          vk.waitForFences(device, 1, Array(fence), false, FENCE_TIMEOUT)
+        if (res.value != Vulkan.TIMEOUT.value) {
           println("finished waiting")
           shouldWait = false
         }
@@ -173,7 +232,9 @@ object Step17 extends Utils {
     Thread.sleep(1000)
 
     vk.destroyFence(device, fence)
-    framebuffers.foreach { f => vk.destroyFramebuffer(device, f)}
+    framebuffers.foreach { f =>
+      vk.destroyFramebuffer(device, f)
+    }
     vk.destroyPipeline(device, pipeline)
     vk.destroyBuffer(device, vertexBuffer)
     vk.freeMemory(device, vertexBufferMemory)
@@ -191,7 +252,9 @@ object Step17 extends Utils {
     vk.destroyImageView(device, depthImageView)
     vk.freeMemory(device, depthImageMemory)
     vk.destroyImage(device, depthImage)
-    imageViews.foreach { i => vk.destroyImageView(device, i)}
+    imageViews.foreach { i =>
+      vk.destroyImageView(device, i)
+    }
     vk.destroySwapchain(device, swapchain)
     vk.freeCommandBuffers(device, commandPool, 1, commandBuffer)
     vk.destroyCommandPool(device, commandPool)
