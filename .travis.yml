@@ -1,13 +1,16 @@
-dist: trusty
 sudo: required
+
 language: scala
 
+services:
+ - docker
+
 before_install:
+ - docker pull ubuntu:16.04
+ - docker run -v /.ivy /.ivy -v /.sbt /.sbt -it ubuntu bash
+ - curl -s https://raw.githubusercontent.com/paulp/sbt-extras/master/sbt > ~/bin/sbt && chmod 0755 ~/bin/sbt
  - sudo apt-get -qq update
  - sudo apt-get install libglfw3-dev
-
-scala:
- - 2.11.8
 
 script:
   - sbt clean compile
