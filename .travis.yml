@@ -1,8 +1,11 @@
 dist: trusty
+
 sudo: required
 language: scala
 
 before_install:
+ - echo "deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/fillwave_ext.list
+ - echo "deb-src http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/fillwave_ext.list
  - sudo apt-get -qq update
  - sudo apt-get install libglfw3-dev
 
