@@ -5,7 +5,7 @@ language: scala
 
 before_install:
  - git clone https://github.com/glfw/glfw.git
- - cd glfw && git checkout GLFW_VERSION
+ - cd glfw && git checkout $GLFW_VERSION
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
 
 scala:
