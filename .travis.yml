@@ -4,10 +4,9 @@ sudo: required
 language: scala
 
 before_install:
- - echo "deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/fillwave_ext.list
- - echo "deb-src http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/fillwave_ext.list
- - sudo apt-get -qq update
- - sudo apt-get install libglfw3-dev
+ - git clone https://github.com/glfw/glfw.git
+ - cd glfw && git checkout GLFW_VERSION
+ - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
 
 scala:
  - 2.11.8
@@ -16,4 +15,8 @@ script:
   - sbt clean compile coverage test coverageReport
 
 after_success:
-- bash <(curl -s https://codecov.io/bash)
+ - bash <(curl -s https://codecov.io/bash)
+
+env:
+ global:
+  - GLFW_VERSION=3.2
