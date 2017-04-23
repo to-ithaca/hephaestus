@@ -1,4 +1,6 @@
 # hephaestus
+[![Build Status](https://travis-ci.org/to-ithaca/hephaestus.svg?branch=master)](https://travis-ci.org/to-ithaca/hephaestus)
+
 ## How To Build
  1. Download the Vulkan SDK from [LunarXchange](https://vulkan.lunarg.com/)
  2. Build the Vulkan SDK by running `./setup_env.sh`, `./build_samples.sh` and `./build_examples.sh`
