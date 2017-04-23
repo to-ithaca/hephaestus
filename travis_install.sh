@@ -9,7 +9,7 @@ CURRENT_DIR=$(pwd)
 mkdir -p $HOME/.external
 cd $HOME/.external
 
-if[ ! -d "$CLONE_DIR" ]; then
+if [ ! -d "$CLONE_DIR" ]; then
  git clone $GIT_URL $CLONE_DIR
  cd $CLONE_DIR
  git checkout -qf $VERSION
