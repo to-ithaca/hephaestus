@@ -1,16 +1,67 @@
 dist: trusty
+
 sudo: required
 language: scala
 
-before_install:
- - sudo apt-get -qq update
- - sudo apt-get install libglfw3-dev
+branches:
+  only:
+  - master
 
 scala:
  - 2.11.8
 
+addons:
+ apt:
+  packages:
+  - xorg-dev
+  - libglu1-mesa-dev
+  - libxkbcommon-dev
+  - libwayland-dev
+  - libmirclient-dev
+  - libxrandr-dev
+
+cache:
+  directories:
+  - $HOME/.sbt/0.13/dependency
+  - $HOME/.sbt/boot/scala*
+  - $HOME/.sbt/launchers
+  - $HOME/.ivy2/cache
+  - $HOME/.external
+
+before_install:
+ - mkdir -p $HOME/.external
+ - cd $HOME/.external
+ - |
+   if [ ! -d "vulkan" ]; then
+    git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
+    cd vulkan
+    git checkout $VULKAN_VERSION
+    ./update_external_sources.sh
+   else
+    cd vulkan
+   fi
+ - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
+ - cd $HOME/.external
+ - |
+   if [ ! -d "glfw" ]; then
+    git clone https://github.com/glfw/glfw.git
+    cd glfw
+    git checkout $GLFW_VERSION
+   else
+    cd glfw
+   fi
+ - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
+ - cd $TRAVIS_BUILD_DIR
+
 script:
-  - sbt clean compile coverage test coverageReport
+  - sbt clean
+  - sbt native/compile
+  - sbt compile test
 
 after_success:
-- bash <(curl -s https://codecov.io/bash)
+ - bash <(curl -s https://codecov.io/bash)
+
+env:
+ global:
+  - GLFW_VERSION=3.2
+  - VULKAN_VERSION=rt-1.0.39.0
