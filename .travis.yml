@@ -5,8 +5,12 @@ language: scala
 
 before_install:
  - sudo apt-get update -qq
- - sudo apt-get install xorg-dev libglu1-mesa-dev libvulkan-dev
- - git -depth 50 clone https://github.com/glfw/glfw.git
+ - sudo apt-get install xorg-dev libglu1-mesa-dev libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev
+ - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
+ - cd vulkan && git checkout $VULKAN_VERSION
+ - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
+ - cd ..
+ - git 50 clone https://github.com/glfw/glfw.git
  - cd glfw && git checkout $GLFW_VERSION
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
  - cd ..
@@ -23,3 +27,4 @@ after_success:
 env:
  global:
   - GLFW_VERSION=3.2
+  - VULKAN_VERSION=tr-1.0.39.0
