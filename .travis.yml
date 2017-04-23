@@ -27,4 +27,4 @@ after_success:
 env:
  global:
   - GLFW_VERSION=3.2
-  - VULKAN_VERSION=tr-1.0.39.0
+  - VULKAN_VERSION=rt-1.0.39.0
