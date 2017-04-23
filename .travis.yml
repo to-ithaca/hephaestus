@@ -4,16 +4,16 @@ sudo: required
 language: scala
 
 cache:
- - ~/external
+ - $EXTERNAL_DIR
 
 before_install:
  - sudo apt-get update -qq
  - sudo apt-get install xorg-dev libglu1-mesa-dev libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev
- - mkdir ~/external
- - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git ~/external/vulkan
- - git --git-dir=~/external/vulkan checkout $VULKAN_VERSION
- - ~/external/vulkan/update_external_sources.sh
- - ~/external/vulkan/cmake -DBUILD_SHARED_LIBS=ON && ~/external/vulkan/make install
+ - mkdir EXTERNAL_DIR
+ - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git $EXTERNAL_DIR/vulkan
+ - git --git-dir=$EXTERNAL_DIR/vulkan checkout $VULKAN_VERSION
+ - $EXTERNAL_DIR/vulkan/update_external_sources.sh
+ - $EXTERNAL_DIR/vulkan/cmake -DBUILD_SHARED_LIBS=ON && $EXTERNAL_DIR/vulkan/make install
  - git clone https://github.com/glfw/glfw.git
  - cd glfw && git checkout $GLFW_VERSION
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
@@ -34,3 +34,4 @@ env:
  global:
   - GLFW_VERSION=3.2
   - VULKAN_VERSION=rt-1.0.39.0
+  - EXTERNAL_DIR=~/external
