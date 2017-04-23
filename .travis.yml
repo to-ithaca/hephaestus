@@ -8,6 +8,7 @@ before_install:
  - sudo apt-get install xorg-dev libglu1-mesa-dev libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev
  - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
  - cd vulkan && git checkout $VULKAN_VERSION
+ - ./update_external_sources.sh
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
  - cd ..
  - git 50 clone https://github.com/glfw/glfw.git
