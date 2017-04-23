@@ -3,6 +3,13 @@ dist: trusty
 sudo: required
 language: scala
 
+cache:
+  directories:
+  - $HOME/.sbt/0.13/dependency
+  - $HOME/.sbt/boot/scala*
+  - $HOME/.sbt/launchers
+  - $HOME/.ivy2/cache
+
 before_install:
  - sudo apt-get update -qq
  - sudo apt-get install xorg-dev libglu1-mesa-dev libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev
