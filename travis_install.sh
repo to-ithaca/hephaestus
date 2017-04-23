@@ -1,8 +1,8 @@
 #!/bin/bash
 
-GIT_URL=$0
-CLONE_DIR=$1
-VERSION=$2
+GIT_URL=$1
+CLONE_DIR=$2
+VERSION=$3
 
 CURRENT_DIR=$(pwd)
 
