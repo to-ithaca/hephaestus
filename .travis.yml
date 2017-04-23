@@ -24,16 +24,13 @@ cache:
   - $HOME/.ivy2/cache
 
 before_install:
- - cd $HOME
- - mkdir .external
- - cd $HOME/.external
  - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan && cd vulkan && git checkout $VULKAN_VERSION
  - ./update_external_sources.sh
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
- - cd $HOME/.external
+ - cd ..
  - git clone https://github.com/glfw/glfw.git && cd glfw && git checkout $GLFW_VERSION
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
- - cd $HOME/to-ithaca/hephaestus
+ - cd ..
 
 script:
   - sbt clean
