@@ -33,16 +33,23 @@ before_install:
  - cd $HOME/.external
  - |
    if [ ! -d "vulkan" ]; then
-     git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
-     cd vulkan
-     git checkout $VULKAN_VERSION
-     ./update_external_sources.sh
+    git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
+    cd vulkan
+    git checkout $VULKAN_VERSION
+    ./update_external_sources.sh
    else
-     cd vulkan
+    cd vulkan
    fi
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
  - cd $HOME/.external
- - git clone https://github.com/glfw/glfw.git && cd glfw && git checkout $GLFW_VERSION
+ - |
+   if [ ! -d "glfw" ]; then
+    git clone https://github.com/glfw/glfw.git
+    cd glfw
+    git checkout $GLFW_VERSION
+   else
+    cd glfw
+   fi
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
  - cd $TRAVIS_BUILD_DIR
 
