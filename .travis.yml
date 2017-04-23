@@ -11,7 +11,7 @@ before_install:
  - sudo apt-get install xorg-dev libglu1-mesa-dev libxkbcommon-dev libwayland-dev libmirclient-dev libxrandr-dev
  - mkdir ~/external
  - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git ~/external/vulkan
- - git checkout --git-dir=~/external/vulkan $VULKAN_VERSION
+ - git --git-dir=~/external/vulkan checkout $VULKAN_VERSION
  - ~/external/vulkan/update_external_sources.sh
  - ~/external/vulkan/cmake -DBUILD_SHARED_LIBS=ON && ~/external/vulkan/make install
  - git clone https://github.com/glfw/glfw.git
