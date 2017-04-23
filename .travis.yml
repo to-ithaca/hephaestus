@@ -11,7 +11,7 @@ before_install:
  - ./update_external_sources.sh
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
  - cd ..
- - git 50 clone https://github.com/glfw/glfw.git
+ - git clone https://github.com/glfw/glfw.git
  - cd glfw && git checkout $GLFW_VERSION
  - cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
  - cd ..
