@@ -4,7 +4,7 @@ GIT_URL=$1
 CLONE_DIR=$2
 VERSION=$3
 
-CURRENT_DIR=$(pwd)
+pushd .
 
 mkdir -p $HOME/.external
 cd $HOME/.external
@@ -19,4 +19,4 @@ fi
 
 cmake -DBUILD_SHARED_LIBS=ON && make && sudo make install
 
-cd $CURRENT_DIR
+popd
