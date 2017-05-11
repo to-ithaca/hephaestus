@@ -23,3 +23,6 @@ build_script:
  - cd glfw
  - git checkout %GLFW_VERSION%
  - cmake -DBUILD_SHARED_LIBS=ON && cmake --build
+ - sbt clean
+ - sbt native/compile
+ - sbt compile test
