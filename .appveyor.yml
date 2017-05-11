@@ -1,0 +1,9 @@
+branches:
+ only:
+ - master
+ 
+ os:
+  - Visual Studio 2015
+ 
+ build_script:
+  - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git
