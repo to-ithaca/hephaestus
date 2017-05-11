@@ -1,3 +1,8 @@
+install:
+  - cmd: choco install sbt -ia "INSTALLDIR=""C:\sbt"""
+  - cmd: SET PATH=C:\sbt\bin;%JAVA_HOME%\bin;%PATH%
+  - cmd: SET SBT_OPTS=-XX:MaxPermSize=2g -Xmx4g
+
 branches:
   only:
     - master
@@ -22,7 +27,7 @@ build_script:
  - git clone https://github.com/glfw/glfw.git
  - cd glfw
  - git checkout %GLFW_VERSION%
- - cmake -DBUILD_SHARED_LIBS=ON && cmake --build
+ - cmake -DBUILD_SHARED_LIBS=ON && cmake --build .
  - cd ..
  - sbt clean
  - sbt native/compile
