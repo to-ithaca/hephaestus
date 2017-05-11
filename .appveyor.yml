@@ -18,3 +18,7 @@ build_script:
  - git checkout %VULKAN_VERSION%
  - update_external_sources.bat --all
  - build_windows_targets.bat
+ - cd ..
+ - git clone https://github.com/glfw/glfw.git
+ - cd glfw
+ - cmake -DBUILD_SHARED_LIBS=ON && cmake --build
