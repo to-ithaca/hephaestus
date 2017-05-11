@@ -6,8 +6,8 @@ os:
   - Visual Studio 2015
   
 environment:
-  VULKAN_VERSION: 3.2
-  GLFW_VERSION: rt-1.0.39.0
+  GLFW_VERSION: 3.2
+  VULKAN_VERSION: rt-1.0.39.0
 
 build_script:
  - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
