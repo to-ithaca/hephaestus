@@ -1,7 +1,7 @@
 branches:
- only:
- - master
- 
+  only:
+    - master
+    
  os:
   - Visual Studio 2015
  
