@@ -10,5 +10,6 @@ environment:
   GLFW_VERSION: rt-1.0.39.0
 
 build_script:
- - ./travis_install.sh https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan $VULKAN_VERSION
- - ./travis_install.sh https://github.com/glfw/glfw.git glfw $GLFW_VERSION
+ - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
+ - cd vulkan
+ - git checkout %VULKAN_VERSION%
