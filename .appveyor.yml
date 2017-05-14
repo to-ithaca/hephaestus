@@ -1,0 +1,38 @@
+install:
+  - cmd: choco install sbt -ia "INSTALLDIR=""C:\sbt"""
+  - cmd: SET PATH=C:\sbt\bin;%JAVA_HOME%\bin;%PATH%
+  - cmd: SET SBT_OPTS=-XX:MaxPermSize=2g -Xmx4g
+
+branches:
+  only:
+    - master
+    
+os:
+  - Visual Studio 2015
+  
+environment:
+  GLFW_VERSION: 3.2
+  VULKAN_VERSION: rt-1.0.39.0
+  PYTHON_PATH: "C:/Python35"
+  PYTHON_PACKAGE_PATH: "C:/Python35/Scripts"
+
+build_script:
+ - git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git vulkan
+ - "SET PATH=C:\\Python35;C:\\Python35\\Scripts;%PATH%"
+ - cd vulkan
+ - git checkout %VULKAN_VERSION%
+ - update_external_sources.bat --all
+ - build_windows_targets.bat
+ - cd ..
+ - git clone https://github.com/glfw/glfw.git
+ - cd glfw
+ - git checkout %GLFW_VERSION%
+ - mkdir build
+ - cd build
+ - cmake -DBUILD_SHARED_LIBS=%BUILD_SHARED_LIBS%=ON ..
+ - cmake --build .
+ - cd ..
+ - cd ..
+ #- sbt clean
+ #- sbt native/compile
+ #- sbt compile test
