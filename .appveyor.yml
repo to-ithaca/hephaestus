@@ -27,7 +27,11 @@ build_script:
  - git clone https://github.com/glfw/glfw.git
  - cd glfw
  - git checkout %GLFW_VERSION%
- - make . && make install
+ - mkdir build
+ - cd build
+ - cmake -DBUILD_SHARED_LIBS=%BUILD_SHARED_LIBS%=ON ..
+ - cmake --build .
+ - cd ..
  - cd ..
  - sbt clean
  - sbt native/compile
